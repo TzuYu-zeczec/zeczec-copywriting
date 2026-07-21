@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>受眾矩陣 — flyingV 文案系統</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content" id="task-main"></main>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    window.TASK_CONFIG = {
+      skillKey: 'persona-matrix',
+      title: '受眾矩陣',
+      desc: '依產品資訊產出受眾輪廓，並一鍵建立成 Google Sheets 受眾標籤矩陣（建立約需 3 分鐘）。',
+      saveTarget: 'sheets',
+      placeholder: '例：\n聚焦在 3C 重度使用者與通勤族\n年齡偏年輕、重視性價比'
+    };
+  </script>
+  <script src="/js/task-runner.js"></script>
+</body>
+</html>

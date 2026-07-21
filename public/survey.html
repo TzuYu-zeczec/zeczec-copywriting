@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>問卷系統 — flyingV 文案系統</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <!-- Main -->
+    <main class="main-content">
+      <div class="page-header">
+        <h2>問卷系統</h2>
+      </div>
+
+      <!-- 設定 -->
+      <div class="card">
+        <div class="form-group">
+          <label>選擇產品</label>
+          <select id="product-select"><option value="">載入中...</option></select>
+        </div>
+        <div class="form-group">
+          <label>問卷平台</label>
+          <div class="flex gap-4">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="platform" value="typeform" checked style="width:auto;"> Typeform（逐張圖卡沉浸式，可一鍵自動建立）
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="platform" value="surveycake" style="width:auto;"> SurveyCake（長頁滾動互動式 HTML）
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 階段一：問卷文案 -->
+      <div class="card">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <h3 style="margin:0;">① 問卷文案</h3>
+          <div class="flex gap-2">
+            <button class="btn btn-primary" id="btn-gen-copy" onclick="generateCopy()">產生問卷文案</button>
+            <button class="btn btn-secondary" id="btn-save-doc" onclick="saveDoc()" disabled>存到 Google Doc</button>
+          </div>
+        </div>
+        <p class="text-muted text-sm mb-2">產出可直接使用的問卷文案（含題型、配圖位置標註、圖片製作清單）。存到 Google Doc 後可一鍵下載成 .docx。</p>
+        <pre id="copy-output" style="white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.7;background:var(--gray-50,#f8f9fb);border:1px solid var(--gray-200,#e5e7eb);border-radius:8px;padding:16px;min-height:120px;margin:0;"></pre>
+        <div id="doc-result" class="text-sm mt-2"></div>
+      </div>
+
+      <!-- 階段二：配圖設計稿 HTML -->
+      <div class="card">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <h3 style="margin:0;">② 配圖設計稿（HTML）</h3>
+          <div class="flex gap-2">
+            <button class="btn btn-primary" id="btn-gen-html" onclick="generateHtml()" disabled>產生配圖設計稿</button>
+            <button class="btn btn-secondary" id="btn-save-html" onclick="saveHtmlFile()" disabled>存到雲端（.html）</button>
+          </div>
+        </div>
+        <p class="text-muted text-sm mb-2">產出可在瀏覽器開啟、截圖或交給設計師的 HTML 設計稿。請先完成步驟①。</p>
+        <div id="html-status" class="text-sm text-muted"></div>
+        <iframe id="html-preview" class="hidden" style="width:100%;height:600px;border:1px solid var(--gray-200,#e5e7eb);border-radius:8px;margin-top:8px;background:#fff;"></iframe>
+        <div id="html-result" class="text-sm mt-2"></div>
+      </div>
+
+      <!-- 階段三：自動建立 Typeform -->
+      <div class="card" id="typeform-card">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <h3 style="margin:0;">③ 自動完成初版 Typeform</h3>
+          <button class="btn btn-success" id="btn-create-tf" onclick="createTypeformForm()" disabled>自動建立 Typeform 問卷</button>
+        </div>
+        <p class="text-muted text-sm mb-2">透過 Typeform API 用步驟①的文案自動建立整份問卷（歡迎頁＋所有題目＋感謝頁）。Token 已在後端設定，免輸入。請先完成步驟①。</p>
+        <div id="tf-result" class="text-sm mt-2"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    let products = [];
+    let copyText = '';
+    let htmlText = '';
+
+    function getPlatform() {
+      return document.querySelector('input[name="platform"]:checked').value;
+    }
+    function getProductId() {
+      return document.getElementById('product-select').value;
+    }
+    function getProductName() {
+      const p = products.find(x => x.id === getProductId());
+      return p ? p.name : '';
+    }
+
+    async function loadProducts() {
+      const sel = document.getElementById('product-select');
+      try {
+        const data = await API.listProducts();
+        products = data.products || [];
+        if (!products.length) {
+          sel.innerHTML = '<option value="">尚無產品，請先到產品列表新增</option>';
+          return;
+        }
+        sel.innerHTML = '<option value="">請選擇產品…</option>' +
+          products.map(p => `<option value="${p.id}">${UI.escapeHtml(p.name)}</option>`).join('');
+        const pre = UI.getUrlParam('productId');
+        if (pre && products.some(p => p.id === pre)) sel.value = pre;
+      } catch (e) {
+        sel.innerHTML = '<option value="">載入失敗</option>';
+        UI.toast(e.message, 'error');
+      }
+    }
+
+    function updateTypeformCardVisibility() {
+      document.getElementById('typeform-card').classList.toggle('hidden', getPlatform() !== 'typeform');
+    }
+
+    function validateSelection() {
+      if (!getProductId()) { UI.toast('請先選擇產品', 'error'); return false; }
+      return true;
+    }
+
+    // === ① 問卷文案 ===
+    function generateCopy() {
+      if (!validateSelection()) return;
+      const out = document.getElementById('copy-output');
+      const btn = document.getElementById('btn-gen-copy');
+      copyText = '';
+      out.textContent = '';
+      btn.disabled = true; btn.textContent = '產出中…';
+      document.getElementById('btn-save-doc').disabled = true;
+      document.getElementById('doc-result').innerHTML = '';
+
+      API.streamSurvey({ productId: getProductId(), platform: getPlatform(), stage: 'copy' }, {
+        onToken: (t) => { copyText += t; out.textContent = copyText; out.scrollTop = out.scrollHeight; },
+        onDone: () => {
+          btn.disabled = false; btn.textContent = '重新產生問卷文案';
+          if (copyText.trim()) {
+            document.getElementById('btn-save-doc').disabled = false;
+            document.getElementById('btn-gen-html').disabled = false;
+            if (getPlatform() === 'typeform') document.getElementById('btn-create-tf').disabled = false;
+            UI.toast('問卷文案完成', 'success');
+          }
+        },
+        onError: (e) => { btn.disabled = false; btn.textContent = '產生問卷文案'; UI.toast(e, 'error'); }
+      });
+    }
+
+    async function saveDoc() {
+      if (!copyText.trim()) return;
+      const btn = document.getElementById('btn-save-doc');
+      btn.disabled = true; btn.textContent = '儲存中…';
+      try {
+        const r = await API.saveToDrive(copyText, getProductName(), getPlatform() === 'typeform' ? '募資前測問卷（Typeform）' : '募資前測問卷（SurveyCake）');
+        document.getElementById('doc-result').innerHTML =
+          `已存到 Google Doc：<a href="${r.docUrl}" target="_blank" style="color:var(--primary);">${UI.escapeHtml(r.title)}</a>（在 Google Docs 可「下載成 .docx」）`;
+        UI.toast('已存到 Google Doc', 'success');
+      } catch (e) { UI.toast(e.message, 'error'); }
+      btn.disabled = false; btn.textContent = '存到 Google Doc';
+    }
+
+    // === ② 配圖設計稿 HTML ===
+    function stripFences(s) {
+      let t = s.trim();
+      t = t.replace(/^```(?:html)?\s*/i, '').replace(/```\s*$/i, '');
+      const i = t.indexOf('<!DOCTYPE');
+      return i > 0 ? t.slice(i) : t;
+    }
+
+    function generateHtml() {
+      if (!validateSelection()) return;
+      const btn = document.getElementById('btn-gen-html');
+      const status = document.getElementById('html-status');
+      htmlText = '';
+      btn.disabled = true; btn.textContent = '產出中…';
+      document.getElementById('btn-save-html').disabled = true;
+      document.getElementById('html-result').innerHTML = '';
+      let chars = 0;
+      status.textContent = '產出中… 0 字';
+
+      API.streamSurvey({ productId: getProductId(), platform: getPlatform(), stage: 'html' }, {
+        onToken: (t) => { htmlText += t; chars += t.length; status.textContent = `產出中… ${chars} 字`; },
+        onDone: () => {
+          btn.disabled = false; btn.textContent = '重新產生配圖設計稿';
+          const clean = stripFences(htmlText);
+          htmlText = clean;
+          if (clean.trim()) {
+            const iframe = document.getElementById('html-preview');
+            iframe.srcdoc = clean;
+            iframe.classList.remove('hidden');
+            status.textContent = `完成，共 ${clean.length} 字。下方為預覽：`;
+            document.getElementById('btn-save-html').disabled = false;
+            UI.toast('配圖設計稿完成', 'success');
+          }
+        },
+        onError: (e) => { btn.disabled = false; btn.textContent = '產生配圖設計稿'; status.textContent = ''; UI.toast(e, 'error'); }
+      });
+    }
+
+    async function saveHtmlFile() {
+      if (!htmlText.trim()) return;
+      const btn = document.getElementById('btn-save-html');
+      btn.disabled = true; btn.textContent = '儲存中…';
+      try {
+        const r = await API.saveHtml(htmlText, getProductName(), getPlatform());
+        document.getElementById('html-result').innerHTML =
+          `已存到雲端：<a href="${r.fileUrl}" target="_blank" style="color:var(--primary);">${UI.escapeHtml(r.title)}</a> ｜ <a href="${r.downloadUrl}" style="color:var(--primary);">下載 .html</a>`;
+        UI.toast('已存到雲端', 'success');
+      } catch (e) { UI.toast(e.message, 'error'); }
+      btn.disabled = false; btn.textContent = '存到雲端（.html）';
+    }
+
+    // === ③ 自動建立 Typeform ===
+    async function createTypeformForm() {
+      if (!copyText.trim()) { UI.toast('請先產生問卷文案', 'error'); return; }
+      const btn = document.getElementById('btn-create-tf');
+      btn.disabled = true; btn.textContent = '建立中…（約 30 秒）';
+      document.getElementById('tf-result').innerHTML = '';
+      try {
+        const r = await API.createTypeform(copyText, getProductName());
+        let html = `<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:12px;">
+          <div style="font-weight:600;margin-bottom:6px;">✅ 已建立 Typeform 問卷（${r.fieldCount} 題）</div>
+          <div>填寫連結：<a href="${r.formUrl}" target="_blank" style="color:var(--primary);">${r.formUrl}</a></div>
+          <div>後台編輯：<a href="${r.editUrl}" target="_blank" style="color:var(--primary);">${r.editUrl}</a></div>`;
+        const steps = ['上傳每張 1080×1520 圖片到對應的 statement 卡片', '感謝頁的 LINE 連結替換為正式網址', '預覽測試 → 發布'];
+        if (r.needsMultiple && r.needsMultiple.length) {
+          steps.unshift('在後台為以下題目開啟「Allow Multiple Selections」複選：' + r.needsMultiple.map(t => `「${t}」`).join('、'));
+        }
+        html += `<div style="margin-top:8px;font-weight:600;">需手動完成：</div><ol style="margin:4px 0 0 18px;">${steps.map(s => `<li>${UI.escapeHtml(s)}</li>`).join('')}</ol></div>`;
+        document.getElementById('tf-result').innerHTML = html;
+        UI.toast('Typeform 問卷已建立', 'success');
+      } catch (e) {
+        UI.toast(e.message, 'error');
+        document.getElementById('tf-result').innerHTML = `<span style="color:var(--danger);">${UI.escapeHtml(e.message)}</span>`;
+      }
+      btn.disabled = false; btn.textContent = '自動建立 Typeform 問卷';
+    }
+
+    // Reset downstream when product/platform changes
+    function resetDownstream() {
+      copyText = ''; htmlText = '';
+      document.getElementById('copy-output').textContent = '';
+      document.getElementById('doc-result').innerHTML = '';
+      document.getElementById('html-result').innerHTML = '';
+      document.getElementById('html-status').textContent = '';
+      const iframe = document.getElementById('html-preview');
+      iframe.classList.add('hidden'); iframe.srcdoc = '';
+      document.getElementById('tf-result').innerHTML = '';
+      document.getElementById('btn-save-doc').disabled = true;
+      document.getElementById('btn-gen-html').disabled = true;
+      document.getElementById('btn-save-html').disabled = true;
+      document.getElementById('btn-create-tf').disabled = true;
+      document.getElementById('btn-gen-copy').textContent = '產生問卷文案';
+      document.getElementById('btn-gen-html').textContent = '產生配圖設計稿';
+    }
+
+    document.getElementById('product-select').addEventListener('change', resetDownstream);
+    document.querySelectorAll('input[name="platform"]').forEach(r =>
+      r.addEventListener('change', () => { updateTypeformCardVisibility(); resetDownstream(); }));
+
+    // Init
+    updateTypeformCardVisibility();
+    loadProducts();
+  </script>
+</body>
+</html>

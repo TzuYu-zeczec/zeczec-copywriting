@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>產品資訊 — flyingV 文案系統</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .file-drop-zone {
+      border: 2px dashed var(--gray-300);
+      border-radius: 8px;
+      padding: 24px 16px;
+      text-align: center;
+      color: var(--gray-400);
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .file-drop-zone:hover { border-color: var(--primary); color: var(--primary); }
+    .file-drop-zone.dragover { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+    .file-drop-zone svg { display: block; margin: 0 auto 8px; }
+    .file-drop-zone p { margin: 0; }
+
+    /* 新增資料區塊 */
+    .add-data-card { border-left: 4px solid var(--primary); }
+    .add-data-card .form-section h3 { display:flex; align-items:center; gap:8px; }
+
+    /* 衝突比對 */
+    .conflict-item {
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+    .conflict-item h4 { font-size: 14px; margin-bottom: 10px; color: var(--gray-900); }
+    .conflict-values { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+    .conflict-col { font-size: 13px; }
+    .conflict-col .conflict-label { font-size: 12px; font-weight: 600; color: var(--gray-500); margin-bottom: 4px; }
+    .conflict-col .conflict-val {
+      background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 6px;
+      padding: 8px 10px; white-space: pre-wrap; word-break: break-word; max-height: 140px; overflow-y: auto;
+    }
+    .conflict-col.is-new .conflict-val { background: var(--primary-light); border-color: var(--primary); }
+    .conflict-choices { display: flex; gap: 16px; font-size: 13px; }
+    .conflict-choices label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 500; }
+    .modal.modal-lg { max-width: 760px; width: 92%; max-height: 86vh; display:flex; flex-direction:column; }
+    .modal.modal-lg .conflict-list,
+    .modal.modal-lg .merge-list { overflow-y: auto; flex: 1; margin: 4px 0 8px; }
+
+    /* 智慧合併清單 */
+    .merge-field { margin-bottom: 18px; }
+    .merge-field-head { font-size: 14px; font-weight: 700; color: var(--gray-900); margin-bottom: 8px; display:flex; align-items:center; gap:8px; }
+    .merge-field-head .merge-count { font-size: 12px; font-weight: 500; color: var(--gray-500); }
+    .merge-row {
+      border: 1px solid var(--gray-200); border-radius: var(--radius);
+      padding: 10px 12px; margin-bottom: 8px;
+    }
+    .merge-row.is-add { border-left: 4px solid var(--success); }
+    .merge-row.is-modify { border-left: 4px solid var(--primary); }
+    .merge-row-top { display:flex; align-items:center; gap:8px; margin-bottom: 6px; }
+    .merge-tag { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px; color:#fff; }
+    .merge-tag.tag-add { background: var(--success); }
+    .merge-tag.tag-modify { background: var(--primary); }
+    .merge-toggle { margin-left:auto; display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; font-weight:500; }
+    .merge-text { font-size: 13px; white-space: pre-wrap; word-break: break-word; background: var(--gray-50); border:1px solid var(--gray-200); border-radius:6px; padding: 7px 9px; }
+    .merge-text.new { background: var(--primary-light); border-color: var(--primary); }
+    .merge-text.old { background: var(--gray-50); color: var(--gray-500); }
+    .merge-text.old.struck { text-decoration: line-through; }
+    .merge-choices { display: flex; gap: 14px; flex-wrap: wrap; margin-left: auto; font-size: 13px; }
+    .merge-choices label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-weight: 500; }
+    .merge-old-label { font-size:11px; color: var(--gray-400); margin: 6px 0 3px; }
+    .merge-row.off { opacity: 0.5; }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h2 id="page-title">新增產品</h2>
+        <div class="flex gap-2">
+          <a href="/index.html" class="btn btn-secondary">返回列表</a>
+          <button class="btn btn-primary" onclick="saveProduct()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            儲存
+          </button>
+        </div>
+      </div>
+
+      <!-- 新增資料（編輯時才顯示）-->
+      <div id="add-data-block" class="card add-data-card hidden" style="margin-bottom:16px;">
+        <div class="form-section" style="margin-bottom:0;">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            新增資料
+          </h3>
+          <p class="text-muted text-sm" style="margin-bottom:12px;">上傳新檔案或貼上新資訊，系統會 AI 智慧合併進現有資料：<strong>全新的特色直接新增、同一屬性數值更新的取代舊值</strong>，並逐條列出讓你確認後再套用。</p>
+          <button type="button" class="btn btn-primary" onclick="openAddDataModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+            上傳／貼上新資料
+          </button>
+        </div>
+      </div>
+
+      <form id="product-form" onsubmit="event.preventDefault(); saveProduct();">
+        <!-- 基本資訊 -->
+        <div class="card">
+          <div class="form-section">
+            <h3>基本資訊</h3>
+            <div class="form-group">
+              <label>產品名稱 *</label>
+              <input type="text" name="name" required placeholder="例：自動翻譯耳機 TransBuds Pro">
+            </div>
+            <div class="form-group">
+              <label>一句話描述 *</label>
+              <input type="text" name="one_liner" required placeholder="例：戴上就懂 40 國語言的真無線翻譯耳機">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>產品類別</label>
+                <select name="category">
+                  <option value="">請選擇</option>
+                  <option value="3C">3C 科技</option>
+                  <option value="生活">生活用品</option>
+                  <option value="戶外">戶外運動</option>
+                  <option value="設計">設計文創</option>
+                  <option value="飲食">飲食</option>
+                  <option value="社會">社會公益</option>
+                  <option value="其他">其他</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>平台</label>
+                <input type="text" name="platform" value="flyingV" readonly style="background:var(--gray-100);">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 產品賣點與規格 -->
+        <div class="card">
+          <div class="form-section">
+            <h3>賣點與規格</h3>
+            <div class="form-group">
+              <label>產品賣點 <span class="optional">（每行一個賣點）</span></label>
+              <textarea name="selling_points" rows="5" placeholder="例：&#10;即時翻譯 40 種語言，0.3 秒延遲&#10;ANC 主動降噪，翻譯更清晰&#10;單次充電 8 小時續航"></textarea>
+            </div>
+            <div class="form-group">
+              <label>產品規格 <span class="optional">選填</span></label>
+              <textarea name="specs" rows="3" placeholder="例：藍牙 5.3、重量 5.2g/耳、IPX5 防水"></textarea>
+            </div>
+            <div class="form-group">
+              <label>認證/獎項/媒體報導 <span class="optional">選填</span></label>
+              <textarea name="certifications" rows="2" placeholder="例：CES 2026 創新獎、NCC 認證、數位時代報導"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- 價格方案 -->
+        <div class="card">
+          <div class="form-section">
+            <h3>價格與方案 <span class="optional">選填</span></h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>原價</label>
+                <input type="text" name="original_price" placeholder="例：NT$ 4,990">
+              </div>
+              <div class="form-group">
+                <label>早鳥價</label>
+                <input type="text" name="early_bird_price" placeholder="例：NT$ 2,990">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>方案內容 <span class="optional">選填</span></label>
+              <textarea name="plans" rows="3" placeholder="例：&#10;超早鳥 1 入 $2,490&#10;早鳥 1 入 $2,990&#10;雙人組 $5,480"></textarea>
+            </div>
+            <div class="form-group">
+              <label>分期資訊 <span class="optional">選填</span></label>
+              <input type="text" name="installment_info" placeholder="例：可分 3 期零利率">
+            </div>
+          </div>
+        </div>
+
+        <!-- 受眾與競爭 -->
+        <div class="card">
+          <div class="form-section">
+            <h3>受眾與競爭分析</h3>
+            <div class="form-group">
+              <label>核心受眾</label>
+              <textarea name="core_audience" rows="3" placeholder="例：25-40 歲商務旅行者，經常出差到非英語系國家，需要即時溝通"></textarea>
+            </div>
+            <div class="form-group">
+              <label>次要受眾 <span class="optional">選填</span></label>
+              <textarea name="secondary_audience" rows="2" placeholder="例：外語學習者、國際志工、海外留學生"></textarea>
+            </div>
+            <div class="form-group">
+              <label>現有替代方案</label>
+              <textarea name="current_alternatives" rows="2" placeholder="例：Google 翻譯 App、翻譯機（如 ili）"></textarea>
+            </div>
+            <div class="form-group">
+              <label>競爭對手</label>
+              <textarea name="competitors" rows="2" placeholder="例：Timekettle WT2 Edge、Google Pixel Buds"></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>主要優勢</label>
+                <textarea name="main_advantage" rows="3" placeholder="例：唯一結合 ANC + 即時翻譯的真無線耳機，不需掏手機"></textarea>
+              </div>
+              <div class="form-group">
+                <label>主要劣勢 <span class="optional">選填，用於內部參考</span></label>
+                <textarea name="main_weakness" rows="3" placeholder="例：離線翻譯僅支援 10 種語言"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 品牌故事與感性面 -->
+        <div class="card">
+          <div class="form-section">
+            <h3>品牌故事與感性面</h3>
+            <div class="form-group">
+              <label>品牌故事 <span class="optional">選填</span></label>
+              <textarea name="brand_story" rows="4" placeholder="例：團隊在東南亞旅行時因語言不通錯過了一次重要的在地體驗，決心打造一款「戴上就能溝通」的產品"></textarea>
+            </div>
+            <div class="form-group">
+              <label>KOL / 媒體報導 <span class="optional">選填</span></label>
+              <textarea name="kol_coverage" rows="2" placeholder="例：電獺少女開箱、T客邦評測"></textarea>
+            </div>
+            <div class="form-group">
+              <label>使用者見證 <span class="optional">選填</span></label>
+              <textarea name="testimonials" rows="3" placeholder="例：「出差日本再也不用比手畫腳了」— 使用者 A"></textarea>
+            </div>
+            <div class="form-group">
+              <label>希望帶給使用者的感受</label>
+              <textarea name="desired_feeling" rows="2" placeholder="例：自信、無障礙溝通的自由感"></textarea>
+            </div>
+            <div class="form-group">
+              <label>最佳使用場景</label>
+              <textarea name="best_scenario" rows="2" placeholder="例：在東京街頭直接用日文問路、在曼谷夜市殺價"></textarea>
+            </div>
+            <div class="form-group">
+              <label>團隊最喜歡的一個特點</label>
+              <input type="text" name="favorite_point" placeholder="例：「0.3 秒就翻好」這個速度感">
+            </div>
+          </div>
+        </div>
+
+        <!-- 專案資訊 -->
+        <div class="card">
+          <div class="form-section">
+            <h3>專案資訊</h3>
+            <div class="form-group">
+              <label>專案頁面連結 <span class="optional">選填</span></label>
+              <input type="url" name="project_url" placeholder="https://www.flyingv.cc/projects/...">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>開賣日期 <span class="optional">選填</span></label>
+                <input type="date" name="launch_date">
+              </div>
+              <div class="form-group">
+                <label>結案日期 <span class="optional">選填</span></label>
+                <input type="date" name="end_date">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>折扣碼 <span class="optional">選填</span></label>
+                <input type="text" name="discount_code" placeholder="例：EARLY2026">
+              </div>
+              <div class="form-group">
+                <label>獨家優惠 <span class="optional">選填</span></label>
+                <input type="text" name="exclusive_perks" placeholder="例：前 100 名加贈收納盒">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>來源 Google Sheet <span class="optional">選填，PM 策略表連結</span></label>
+              <input type="url" name="sheet_url" placeholder="https://docs.google.com/spreadsheets/d/...">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>狀態</label>
+                <select name="status">
+                  <option value="draft">草稿</option>
+                  <option value="active">進行中</option>
+                  <option value="completed">已結案</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>里程碑 <span class="optional">選填</span></label>
+                <input type="text" name="milestones" placeholder="例：3 小時破百萬、首日 500 人贊助">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <input type="hidden" name="id">
+      </form>
+    </main>
+  </div>
+
+  <!-- 新增資料：上傳/貼上 modal -->
+  <div id="add-data-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeAddDataModal()">
+    <div class="modal">
+      <h3>新增資料</h3>
+      <p class="text-muted text-sm mb-4">上傳募資簡報、產品型錄、產品照片或網頁，系統會自動辨識並比對現有欄位。<strong>找不到的欄位會留白，不會編造。</strong></p>
+      <div class="form-group">
+        <label>選擇檔案（可多選 · 可直接拖曳檔案進來）</label>
+        <div id="add-drop-zone" class="file-drop-zone" onclick="document.getElementById('add-data-input').click()">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p class="text-sm"><strong>點此選擇檔案</strong>，或將檔案拖曳到這個區塊</p>
+        </div>
+        <input type="file" id="add-data-input" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.htm,.html,.md,.markdown,.txt" multiple onchange="renderAddFiles()" style="display:none;">
+        <p class="text-muted text-sm mt-2">支援格式：PDF、PNG、JPG、GIF、WebP、HTML、Markdown(.md)、純文字(.txt)。<strong>動畫 GIF 只讀第一格；HEIC（iPhone 照片）請先轉 JPG；PPT / Keynote 請先另存為 PDF。</strong>單檔上限 25MB，圖片一次最多 12 張（太多請分批）。</p>
+      </div>
+      <div id="add-data-list" class="text-sm mb-2"></div>
+      <div class="form-group">
+        <label>或直接貼上文字 <span class="optional">選填</span></label>
+        <textarea id="add-data-text" rows="4" placeholder="把新的產品資訊貼進來，會和上面的檔案一起辨識、自動對應欄位。"></textarea>
+      </div>
+      <div class="flex gap-2" style="justify-content:flex-end; margin-top:20px;">
+        <button class="btn btn-secondary" onclick="closeAddDataModal()">取消</button>
+        <button class="btn btn-primary" id="add-data-btn" onclick="handleAddData()">開始辨識</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 智慧合併確認 modal -->
+  <div id="merge-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeMergeModal()">
+    <div class="modal modal-lg">
+      <h3>確認合併內容</h3>
+      <p class="text-muted text-sm mb-2" id="merge-summary"></p>
+      <div class="merge-list" id="merge-list"></div>
+      <div class="flex gap-2" style="justify-content:space-between; align-items:center; margin-top:8px;">
+        <div class="text-sm">
+          <a href="javascript:void(0)" onclick="setAllMerge(false)" style="color:var(--gray-600);">全部不套用</a>
+          <span style="color:var(--gray-300);"> · </span>
+          <a href="javascript:void(0)" onclick="setAllMerge(true)" style="color:var(--primary);">全部套用</a>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn btn-secondary" onclick="closeMergeModal()">取消</button>
+          <button class="btn btn-primary" onclick="applyMerge()">套用</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    const form = document.getElementById('product-form');
+    const productId = UI.getUrlParam('id');
+
+    // If editing existing product, load data
+    if (productId) {
+      document.getElementById('page-title').textContent = '編輯產品';
+      document.getElementById('add-data-block').classList.remove('hidden');
+      loadProduct();
+    } else {
+      // New product — check for data auto-extracted from uploaded files
+      prefillFromImport();
+    }
+
+    function prefillFromImport() {
+      const raw = sessionStorage.getItem('importedProduct');
+      if (!raw) return;
+      sessionStorage.removeItem('importedProduct');
+      try {
+        const product = JSON.parse(raw);
+        let filled = 0;
+        Object.keys(product).forEach(key => {
+          const input = form.elements[key];
+          if (input && product[key]) { input.value = product[key]; filled++; }
+        });
+        document.getElementById('page-title').textContent = '新增產品（已從檔案自動填入）';
+        UI.toast(filled ? '已從檔案自動填入，請檢查並補齊空白欄位後儲存' : '檔案中沒有可辨識的產品資訊，請手動填寫', filled ? 'success' : 'default');
+      } catch (e) { /* ignore malformed */ }
+    }
+
+    async function loadProduct() {
+      try {
+        const data = await API.getProduct(productId);
+        const product = data.product;
+        if (!product) throw new Error('找不到產品');
+
+        // Fill form
+        Object.keys(product).forEach(key => {
+          const input = form.elements[key];
+          if (input) input.value = product[key] || '';
+        });
+      } catch (e) {
+        UI.toast(e.message, 'error');
+      }
+    }
+
+    async function saveProduct() {
+      const formData = new FormData(form);
+      const data = {};
+      formData.forEach((val, key) => {
+        if (val) data[key] = val;
+      });
+
+      // Validate required fields
+      if (!data.name) { UI.toast('請填寫產品名稱', 'error'); return; }
+      if (!data.one_liner) { UI.toast('請填寫一句話描述', 'error'); return; }
+
+      try {
+        const result = await API.saveProduct(data);
+        UI.toast('儲存成功！', 'success');
+        // If new product, redirect to edit mode
+        if (!productId && result.product?.id) {
+          window.location.href = `/product.html?id=${result.product.id}`;
+        }
+      } catch (e) {
+        UI.toast(e.message, 'error');
+      }
+    }
+
+    // ===== 新增資料 + 衝突比對 =====
+    const FIELD_LABELS = {
+      name: '產品名稱', one_liner: '一句話描述', category: '產品類別', platform: '平台',
+      selling_points: '產品賣點', specs: '產品規格', certifications: '認證/獎項/媒體報導',
+      original_price: '原價', early_bird_price: '早鳥價', plans: '方案內容', installment_info: '分期資訊',
+      core_audience: '核心受眾', secondary_audience: '次要受眾', current_alternatives: '現有替代方案',
+      competitors: '競爭對手', main_advantage: '主要優勢', main_weakness: '主要劣勢',
+      brand_story: '品牌故事', kol_coverage: 'KOL / 媒體報導', testimonials: '使用者見證',
+      desired_feeling: '希望帶給使用者的感受', best_scenario: '最佳使用場景', favorite_point: '團隊最喜歡的一個特點',
+      project_url: '專案頁面連結', launch_date: '開賣日期', end_date: '結案日期',
+      discount_code: '折扣碼', exclusive_perks: '獨家優惠', sheet_url: '來源 Google Sheet',
+      status: '狀態', milestones: '里程碑'
+    };
+
+    const MEDIA_TYPES = {
+      pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+      gif: 'image/gif', webp: 'image/webp',
+      htm: 'text/html', html: 'text/html',
+      md: 'text/plain', markdown: 'text/plain', txt: 'text/plain'
+    };
+
+    let addDroppedFiles = [];
+
+    function openAddDataModal() {
+      document.getElementById('add-data-modal').classList.remove('hidden');
+      document.getElementById('add-data-input').value = '';
+      document.getElementById('add-data-list').innerHTML = '';
+      document.getElementById('add-data-text').value = '';
+      addDroppedFiles = [];
+      const btn = document.getElementById('add-data-btn');
+      btn.textContent = '開始辨識';
+      btn.disabled = false;
+    }
+    function closeAddDataModal() {
+      document.getElementById('add-data-modal').classList.add('hidden');
+    }
+
+    function collectAddFiles() {
+      const inputFiles = Array.from(document.getElementById('add-data-input').files || []);
+      const all = inputFiles.concat(addDroppedFiles);
+      const seen = new Set();
+      return all.filter(f => {
+        const key = f.name + ':' + f.size;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+    function renderAddFiles() {
+      const files = collectAddFiles();
+      const el = document.getElementById('add-data-list');
+      if (!files.length) { el.innerHTML = ''; return; }
+      el.innerHTML = files.map(f =>
+        `<div style="color:#1a73e8;font-weight:500;">• ${UI.escapeHtml(f.name)} <span class="text-sm">(${(f.size / 1024 / 1024).toFixed(1)} MB)</span></div>`
+      ).join('');
+    }
+
+    (function setupAddDropZone() {
+      const zone = document.getElementById('add-drop-zone');
+      if (!zone) return;
+      ['dragenter', 'dragover'].forEach(ev =>
+        zone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); zone.classList.add('dragover'); }));
+      ['dragleave', 'drop'].forEach(ev =>
+        zone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); zone.classList.remove('dragover'); }));
+      zone.addEventListener('drop', e => {
+        addDroppedFiles = addDroppedFiles.concat(Array.from(e.dataTransfer.files || []));
+        renderAddFiles();
+      });
+    })();
+
+    function textToBase64Utf8(str) {
+      const bytes = new TextEncoder().encode(str);
+      let bin = '';
+      bytes.forEach(b => { bin += String.fromCharCode(b); });
+      return btoa(bin);
+    }
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = () => reject(new Error('讀取檔案失敗'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Anthropic 多圖請求限制：每張圖任一邊 ≤ 2000px。上傳前把長邊縮到 1280
+    // （低於官方建議的 1568，進一步壓低每張圖的 input token，避免多圖時撞到每分鐘速率上限）。
+    const IMG_MAX_DIM = 1280;
+    const MAX_IMAGES = 12;                       // 一次最多圖片張數（避免超過 AI 單次/用量上限）
+    const MAX_TOTAL_B64 = 18 * 1024 * 1024;      // 壓縮後 base64 總量上限（約 18MB）
+
+    function prepareFilePart(f) {
+      const ext = (f.name.split('.').pop() || '').toLowerCase();
+      const mediaType = MEDIA_TYPES[ext];
+      if (mediaType && mediaType.indexOf('image/') === 0) return imageToPart(f, mediaType);
+      return fileToBase64(f).then(data => ({ name: f.name, mediaType, data }));
+    }
+
+    // 一律把圖片重新編碼成單幀 JPEG（長邊上限 1280）：
+    // 動畫 GIF 會被壓成一幀（解決「尺寸小但檔案超肥」整顆送出撐爆的問題），透明底填白避免變黑。
+    function imageToPart(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const maxSide = Math.max(img.width, img.height) || 1;
+            const scale = maxSide > IMG_MAX_DIM ? IMG_MAX_DIM / maxSide : 1;
+            const w = Math.max(1, Math.round(img.width * scale));
+            const h = Math.max(1, Math.round(img.height * scale));
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            const out = canvas.toDataURL('image/jpeg', 0.85);
+            resolve({ name: file.name, mediaType: 'image/jpeg', data: out.split(',')[1] });
+          };
+          img.onerror = () => reject(new Error(`圖片載入失敗：${file.name}`));
+          img.src = reader.result;
+        };
+        reader.onerror = () => reject(new Error('讀取檔案失敗'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleAddData() {
+      const files = collectAddFiles();
+      const pastedText = (document.getElementById('add-data-text').value || '').trim();
+      if (!files.length && !pastedText) { UI.toast('請先選擇檔案或貼上文字', 'error'); return; }
+
+      let imageCount = 0;
+      for (const f of files) {
+        const ext = (f.name.split('.').pop() || '').toLowerCase();
+        if (!MEDIA_TYPES[ext]) { UI.toast(`不支援的格式：${f.name}。PPT / Keynote 請先轉成 PDF`, 'error'); return; }
+        if (f.size > 25 * 1024 * 1024) { UI.toast(`${f.name} 超過 25MB，請壓縮或拆分`, 'error'); return; }
+        if ((MEDIA_TYPES[ext] || '').indexOf('image/') === 0) imageCount++;
+      }
+      if (imageCount > MAX_IMAGES) {
+        UI.toast(`一次選了 ${imageCount} 張圖片，超過建議上限 ${MAX_IMAGES} 張。請分批匯入（一次 ≤ ${MAX_IMAGES} 張），或改上傳 PDF／貼上文字。`, 'error');
+        return;
+      }
+
+      const btn = document.getElementById('add-data-btn');
+      btn.textContent = '壓縮中...';
+      btn.disabled = true;
+      try {
+        const payload = await Promise.all(files.map(prepareFilePart));
+        if (pastedText) {
+          payload.push({ name: '貼上的文字', mediaType: 'text/plain', data: textToBase64Utf8(pastedText) });
+        }
+        const totalB64 = payload.reduce((s, p) => s + (p.data ? p.data.length : 0), 0);
+        if (totalB64 > MAX_TOTAL_B64) {
+          throw new Error(`壓縮後內容仍約 ${(totalB64 / 1024 / 1024).toFixed(1)}MB，超過 AI 單次上限。請減少張數、分批上傳，或改上傳 PDF／貼文字。`);
+        }
+        btn.textContent = '分析合併中...';
+        // 收集目前表單各欄位值，當作「既有資料」交給 AI 逐條合併
+        const existing = {};
+        new FormData(form).forEach((val, key) => { if (val) existing[key] = val; });
+        const data = await API.mergeProduct(existing, payload);
+        closeAddDataModal();
+        renderMergeResult(data.fields || []);
+      } catch (e) {
+        UI.toast(e.message, 'error');
+        btn.textContent = '開始辨識';
+        btn.disabled = false;
+      }
+    }
+
+    // AI 智慧合併結果：fields = [{ key, label, items:[{op,text,old?}] }]
+    // 執行期狀態：add → on(bool 是否加入)；modify → choice('new'=取代成新值／'old'=保留原本／'both'=兩者都保留)
+    let mergeFields = [];
+
+    function renderMergeResult(fields) {
+      mergeFields = (fields || []).map(f => ({
+        key: f.key,
+        label: f.label || FIELD_LABELS[f.key] || f.key,
+        items: (f.items || []).map(it => ({
+          op: it.op,
+          text: it.text || '',
+          old: it.old || '',
+          on: true,        // add：是否加入此條（預設加入）
+          choice: 'new'    // modify：預設「取代成新值」（符合矛盾取代設定）
+        }))
+      })).filter(f => f.items.some(it => it.op === 'add' || it.op === 'modify'));
+
+      if (!mergeFields.length) {
+        UI.toast('沒有可合併的新資料（內容與現有相同或無法辨識）', 'default');
+        return;
+      }
+
+      let addN = 0, modN = 0;
+      mergeFields.forEach(f => f.items.forEach(it => {
+        if (it.op === 'add') addN++; else if (it.op === 'modify') modN++;
+      }));
+      document.getElementById('merge-summary').innerHTML =
+        `AI 已分析完成，共 <strong>${mergeFields.length}</strong> 個欄位有變動：新增 <strong>${addN}</strong> 條、修改 <strong>${modN}</strong> 條。請逐條確認後套用。<br><span style="color:var(--gray-500);">提示：若 AI 把兩個不相關的條目誤配成「修改」，可選「<strong>兩者都保留</strong>」讓新舊都留下。</span>`;
+      renderMergeList();
+      document.getElementById('merge-modal').classList.remove('hidden');
+    }
+
+    function renderMergeList() {
+      const el = document.getElementById('merge-list');
+      el.innerHTML = mergeFields.map((f, fi) => {
+        const changes = f.items
+          .map((it, ii) => ({ it, ii }))
+          .filter(x => x.it.op === 'add' || x.it.op === 'modify');
+        const rows = changes.map(({ it, ii }) => {
+          if (it.op === 'add') {
+            return `
+            <div class="merge-row is-add ${it.on ? '' : 'off'}" id="mrow-${fi}-${ii}">
+              <div class="merge-row-top">
+                <span class="merge-tag tag-add">新增</span>
+                <label class="merge-toggle">
+                  <input type="checkbox" ${it.on ? 'checked' : ''} onchange="toggleAdd(${fi},${ii},this.checked)">
+                  加入此條
+                </label>
+              </div>
+              <div class="merge-text new">${UI.escapeHtml(it.text)}</div>
+            </div>`;
+          }
+          // modify：三選一
+          const oldStruck = it.choice === 'new' ? 'struck' : '';
+          const rg = `m-${fi}-${ii}`;
+          return `
+            <div class="merge-row is-modify" id="mrow-${fi}-${ii}">
+              <div class="merge-row-top">
+                <span class="merge-tag tag-modify">修改</span>
+                <div class="merge-choices">
+                  <label><input type="radio" name="${rg}" ${it.choice === 'new' ? 'checked' : ''} onchange="setMergeChoice(${fi},${ii},'new')">取代成新值</label>
+                  <label><input type="radio" name="${rg}" ${it.choice === 'old' ? 'checked' : ''} onchange="setMergeChoice(${fi},${ii},'old')">保留原本</label>
+                  <label><input type="radio" name="${rg}" ${it.choice === 'both' ? 'checked' : ''} onchange="setMergeChoice(${fi},${ii},'both')">兩者都保留</label>
+                </div>
+              </div>
+              <div class="merge-old-label">原本</div>
+              <div class="merge-text old ${oldStruck}">${UI.escapeHtml(it.old)}</div>
+              <div class="merge-old-label">新值</div>
+              <div class="merge-text new">${UI.escapeHtml(it.text)}</div>
+            </div>`;
+        }).join('');
+        return `
+          <div class="merge-field">
+            <div class="merge-field-head">${UI.escapeHtml(f.label)} <span class="merge-count">（${changes.length} 處變動）</span></div>
+            ${rows}
+          </div>`;
+      }).join('');
+    }
+
+    function toggleAdd(fi, ii, on) {
+      mergeFields[fi].items[ii].on = on;
+      const row = document.getElementById(`mrow-${fi}-${ii}`);
+      if (row) row.classList.toggle('off', !on);
+    }
+
+    function setMergeChoice(fi, ii, choice) {
+      mergeFields[fi].items[ii].choice = choice; // 'new' | 'old' | 'both'
+      // 只有「取代成新值」時原本那條才劃刪除線（其餘都會保留原本）
+      const row = document.getElementById(`mrow-${fi}-${ii}`);
+      if (row) {
+        const oldEl = row.querySelector('.merge-text.old');
+        if (oldEl) oldEl.classList.toggle('struck', choice === 'new');
+      }
+    }
+
+    // on=true → 新增全加入、修改全取代成新值；on=false → 新增全不加、修改全保留原本
+    function setAllMerge(on) {
+      mergeFields.forEach(f => f.items.forEach(it => {
+        if (it.op === 'add') it.on = on;
+        else if (it.op === 'modify') it.choice = on ? 'new' : 'old';
+      }));
+      renderMergeList();
+    }
+
+    function closeMergeModal() {
+      document.getElementById('merge-modal').classList.add('hidden');
+    }
+
+    // 依使用者選擇，照 items 順序重建每個欄位內容並寫回表單
+    function applyMerge() {
+      let added = 0, replaced = 0, bothKept = 0, fieldsChanged = 0;
+      mergeFields.forEach(f => {
+        const input = form.elements[f.key];
+        if (!input) return;
+        const lines = [];
+        let touched = false;
+        f.items.forEach(it => {
+          if (it.op === 'keep') {
+            lines.push(it.text);
+          } else if (it.op === 'add') {
+            if (it.on) { lines.push(it.text); added++; touched = true; }
+          } else if (it.op === 'modify') {
+            if (it.choice === 'old') {
+              lines.push(it.old);                          // 保留原本
+            } else if (it.choice === 'both') {
+              lines.push(it.old); lines.push(it.text);     // 兩者都保留
+              bothKept++; touched = true;
+            } else {
+              lines.push(it.text); replaced++; touched = true; // 取代成新值
+            }
+          }
+        });
+        if (touched) {
+          input.value = lines.join('\n');
+          fieldsChanged++;
+        }
+      });
+      closeMergeModal();
+      mergeFields = [];
+      if (added || replaced || bothKept) {
+        UI.toast(`已合併：新增 ${added} 條、取代 ${replaced} 條、兩者保留 ${bothKept} 條，更新 ${fieldsChanged} 個欄位。請確認後按「儲存」`, 'success');
+      } else {
+        UI.toast('未套用任何變更（修改項皆選擇保留原本）', 'default');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理 — flyingV 文案系統</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .skill-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .skill-file-list { list-style: none; padding: 0; }
+    .skill-file-list li {
+      padding: 10px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+    .skill-file-list li .filename { font-weight: 500; }
+    .skill-file-list li .filesize { color: var(--gray-400); font-size: 12px; }
+    @media (max-width: 768px) { .skill-detail { grid-template-columns: 1fr; } }
+
+    .usage-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .usage-table th, .usage-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--gray-200); }
+    .usage-table th { font-size: 12px; color: var(--gray-400); font-weight: 600; }
+    .usage-table td.num, .usage-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .usage-table tfoot td { font-weight: 700; border-top: 2px solid var(--gray-300); border-bottom: none; }
+    .usage-note { font-size: 12px; color: var(--gray-400); margin-top: 10px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <main class="main-content" id="admin-main">
+      <div class="page-header">
+        <h2>管理</h2>
+        <p class="text-muted text-sm">Token 使用量、Skill 與 Memory 管理（僅管理員）。</p>
+      </div>
+
+      <!-- Usage section -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3 style="font-size:16px; margin:0; padding:0; border:0;">Token 使用量與預估花費</h3>
+          <div class="flex items-center gap-2">
+            <label class="text-sm text-muted" for="usage-range">時間區間</label>
+            <select id="usage-range" onchange="loadUsage(this.value)" style="min-width:140px;">
+              <option value="all">總量</option>
+            </select>
+          </div>
+        </div>
+        <div id="usage-list">
+          <div class="loading-spinner"></div>
+        </div>
+      </div>
+
+      <!-- Memory section -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3 style="font-size:16px; margin:0; padding:0; border:0;">Memory 檔案</h3>
+          <span class="text-sm text-muted">文案方法論與偏好設定</span>
+        </div>
+        <div id="memory-list">
+          <div class="loading-spinner"></div>
+        </div>
+      </div>
+
+      <!-- Skills section -->
+      <div class="card">
+        <div class="card-header">
+          <h3 style="font-size:16px; margin:0; padding:0; border:0;">文案 Skills</h3>
+          <span class="text-sm text-muted" id="skill-count"></span>
+        </div>
+        <div id="skills-list">
+          <div class="loading-spinner"></div>
+        </div>
+      </div>
+
+      <!-- Skill detail modal -->
+      <div id="skill-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeSkillModal()">
+        <div class="modal" style="max-width:800px;">
+          <div class="flex items-center gap-2" style="justify-content:space-between; margin-bottom:16px;">
+            <h3 id="skill-modal-title">Skill 詳情</h3>
+            <button class="btn btn-sm btn-secondary" onclick="closeSkillModal()">關閉</button>
+          </div>
+          <div id="skill-modal-content"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    async function init() {
+      // 管理員守門：非管理員直接擋下（Cloudflare Access 已限 @ontoo.cc，此處再限管理員 email）
+      const email = await getCurrentUserEmail();
+      if (!ADMIN_EMAILS.includes(email)) {
+        document.getElementById('admin-main').innerHTML = `
+          <div class="empty-state" style="margin-top:80px;">
+            <h3>無權限</h3>
+            <p>此頁僅限管理員（${ADMIN_EMAILS.join('、')}）檢視。${email ? '目前登入：' + UI.escapeHtml(email) : '尚未偵測到登入身分（請確認已啟用 Cloudflare Access 登入）。'}</p>
+          </div>`;
+        return;
+      }
+      await Promise.all([loadUsage(), loadSkills(), loadMemory()]);
+    }
+
+    let rangeReady = false; // 時間區間下拉只建立一次
+
+    // YYYY-MM → 「YYYY年MM月」
+    function monthLabel(ym) {
+      const [y, m] = ym.split('-');
+      return `${y}年${m}月`;
+    }
+
+    // 以本地時間取得 N 個月前的 YYYY-MM（0=本月、1=上個月）
+    function ymOffset(offset) {
+      const d = new Date();
+      d.setDate(1);
+      d.setMonth(d.getMonth() - offset);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    // 用後端回傳的 availableMonths 建立時間區間下拉：總量 / 本月 / 上個月 / 其餘各月份
+    function buildRangeOptions(availableMonths) {
+      if (rangeReady) return;
+      const sel = document.getElementById('usage-range');
+      const cur = ymOffset(0);
+      const prev = ymOffset(1);
+      const opts = [
+        { value: 'all', label: '總量' },
+        { value: cur, label: `本月（${monthLabel(cur)}）` },
+        { value: prev, label: `上個月（${monthLabel(prev)}）` }
+      ];
+      (availableMonths || []).forEach(ym => {
+        if (ym !== cur && ym !== prev) opts.push({ value: ym, label: monthLabel(ym) });
+      });
+      sel.innerHTML = opts.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+      rangeReady = true;
+    }
+
+    async function loadUsage(month) {
+      const el = document.getElementById('usage-list');
+      el.innerHTML = '<div class="loading-spinner"></div>';
+      try {
+        const data = await API.getUsage(month || 'all');
+        buildRangeOptions(data.availableMonths);
+        const users = data.users || [];
+        if (users.length === 0) {
+          el.innerHTML = `<p class="text-muted text-sm">${data.month && data.month !== 'all' ? '此區間' : ''}尚無產出紀錄。</p>`;
+          return;
+        }
+        const fmt = n => (n || 0).toLocaleString();
+        const twd = n => 'NT$ ' + (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        el.innerHTML = `
+          <table class="usage-table">
+            <thead>
+              <tr>
+                <th>使用者</th>
+                <th class="num">產出次數</th>
+                <th class="num">輸入 tokens</th>
+                <th class="num">輸出 tokens</th>
+                <th class="num">預估花費</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${users.map(u => `
+                <tr>
+                  <td>${UI.escapeHtml(u.email)}</td>
+                  <td class="num">${fmt(u.count)}</td>
+                  <td class="num">${fmt(u.input_tokens)}</td>
+                  <td class="num">${fmt(u.output_tokens)}</td>
+                  <td class="num">${twd(u.cost_twd)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td>合計</td>
+                <td class="num">${fmt(data.totals.count)}</td>
+                <td class="num">${fmt(data.totals.input_tokens)}</td>
+                <td class="num">${fmt(data.totals.output_tokens)}</td>
+                <td class="num">${twd(data.totals.cost_twd)}</td>
+              </tr>
+            </tfoot>
+          </table>
+          <p class="usage-note">
+            計價以 Claude Sonnet 為準：輸入 US$${data.pricing.input_per_m} / 百萬 tokens、輸出 US$${data.pricing.output_per_m} / 百萬 tokens；
+            台幣以近似匯率 1 USD = ${data.rate} TWD 換算，僅供參考。<br>
+            「使用者」欄需先啟用 Cloudflare Access 登入後，新產出才會帶上 email；先前無登入的紀錄會歸入「（未記錄）」。
+          </p>`;
+      } catch (e) {
+        if (e.message === 'FORBIDDEN') {
+          el.innerHTML = '<p class="text-muted text-sm">無權限讀取使用量（請確認以管理員帳號登入）。</p>';
+        } else {
+          el.innerHTML = `<p class="text-muted text-sm">載入失敗：${UI.escapeHtml(e.message)}</p>`;
+        }
+      }
+    }
+
+    async function loadSkills() {
+      try {
+        const data = await API.listSkills();
+        const skills = data.skills || [];
+        document.getElementById('skill-count').textContent = `${skills.length} 個 Skills`;
+
+        if (skills.length === 0) {
+          document.getElementById('skills-list').innerHTML =
+            `<div class="empty-state"><h3>尚未上傳 Skills</h3><p>請將 .md 檔案上傳到 Google Drive 的 skills/ 資料夾</p></div>`;
+          return;
+        }
+
+        document.getElementById('skills-list').innerHTML = `
+          <div class="skill-grid" style="grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));">
+            ${skills.map(s => `
+              <div class="skill-card" onclick="showSkillDetail('${s.id}')">
+                <h4>${UI.escapeHtml(SKILL_NAMES[s.name] || s.name)}</h4>
+                <p>${UI.escapeHtml(UI.truncate(s.description || '無說明', 80))}</p>
+                <div class="text-sm text-muted mt-2">
+                  ${s.fileCount ? s.fileCount + ' 個檔案' : ''}
+                  ${s.lastModified ? ' · ' + UI.formatDate(s.lastModified) : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>`;
+      } catch (e) {
+        document.getElementById('skills-list').innerHTML =
+          `<div class="empty-state"><h3>載入失敗</h3><p>${UI.escapeHtml(e.message)}</p></div>`;
+      }
+    }
+
+    async function loadMemory() {
+      try {
+        const data = await API.listMemory();
+        const files = data.files || [];
+
+        if (files.length === 0) {
+          document.getElementById('memory-list').innerHTML =
+            '<p class="text-muted text-sm">尚未上傳 Memory 檔案</p>';
+          return;
+        }
+
+        document.getElementById('memory-list').innerHTML = `
+          <ul class="skill-file-list">
+            ${files.map(f => `
+              <li>
+                <span class="filename">${UI.escapeHtml(f.name)}</span>
+                <span class="filesize">${UI.formatDate(f.lastModified)}</span>
+              </li>
+            `).join('')}
+          </ul>`;
+      } catch (e) {
+        document.getElementById('memory-list').innerHTML =
+          `<p class="text-muted text-sm">載入失敗：${UI.escapeHtml(e.message)}</p>`;
+      }
+    }
+
+    async function showSkillDetail(skillId) {
+      try {
+        const data = await API.getSkill(skillId);
+        const skill = data.skill;
+        document.getElementById('skill-modal-title').textContent = SKILL_NAMES[skill.name] || skill.name;
+        document.getElementById('skill-modal-content').innerHTML = `
+          <div class="skill-detail">
+            <div>
+              <h4 class="mb-2">說明</h4>
+              <p class="text-sm">${UI.escapeHtml(skill.description || '無說明')}</p>
+              <h4 class="mt-4 mb-2">包含檔案</h4>
+              <ul class="skill-file-list">
+                ${(skill.files || []).map(f => `
+                  <li>
+                    <span class="filename">${UI.escapeHtml(f.name)}</span>
+                    <span class="filesize">${f.size ? Math.round(f.size/1024) + ' KB' : ''}</span>
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+            <div>
+              <h4 class="mb-2">SKILL.md 預覽</h4>
+              <div class="output-area" style="font-size:13px; max-height:400px;">${UI.escapeHtml(skill.content || '（無內容）')}</div>
+            </div>
+          </div>
+          <div class="mt-4">
+            <a href="${skill.driveUrl || '#'}" target="_blank" class="btn btn-secondary btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              在 Google Drive 中編輯
+            </a>
+          </div>
+        `;
+        document.getElementById('skill-modal').classList.remove('hidden');
+      } catch (e) {
+        UI.toast(e.message, 'error');
+      }
+    }
+
+    function closeSkillModal() {
+      document.getElementById('skill-modal').classList.add('hidden');
+    }
+
+    init();
+  </script>
+</body>
+</html>

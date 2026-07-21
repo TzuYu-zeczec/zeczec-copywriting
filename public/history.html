@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>產出紀錄 — flyingV 文案系統</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h2>產出紀錄</h2>
+      </div>
+
+      <!-- Filters -->
+      <div class="card" style="padding:16px;">
+        <div class="flex gap-4 items-center" style="flex-wrap:wrap;">
+          <div class="form-group" style="margin:0; min-width:180px;">
+            <select id="filter-product" onchange="loadHistory()">
+              <option value="">全部產品</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0; min-width:180px;">
+            <select id="filter-skill" onchange="loadHistory()">
+              <option value="">全部 Skill</option>
+            </select>
+          </div>
+          <div class="form-group hidden" id="user-filter-wrap" style="margin:0; min-width:200px;">
+            <select id="filter-user" onchange="loadHistory()">
+              <option value="">全部使用者</option>
+            </select>
+          </div>
+          <span class="text-sm text-muted" id="result-count"></span>
+        </div>
+      </div>
+
+      <!-- History list -->
+      <div class="card">
+        <div id="history-list">
+          <div class="empty-state">
+            <div class="loading-spinner"></div>
+            <p class="mt-2">載入中...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail modal -->
+      <div id="detail-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeDetail()">
+        <div class="modal" style="max-width:720px;">
+          <div class="flex items-center gap-2" style="justify-content:space-between; margin-bottom:16px;">
+            <h3 id="detail-title">產出詳情</h3>
+            <button class="btn btn-sm btn-secondary" onclick="closeDetail()">關閉</button>
+          </div>
+          <div id="detail-meta" class="text-sm text-muted mb-4"></div>
+          <div id="detail-content" class="output-area" style="max-height:500px;"></div>
+          <div class="flex gap-2 mt-4">
+            <button class="btn btn-sm btn-secondary" onclick="copyDetailContent()">複製文案</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    let generations = [];
+    let isAdminView = false;
+    let skillIdToName = {}; // skill 資料夾 ID → 中文名稱（產出紀錄存的是 ID）
+    let skillMapPromise = null; // 只抓一次 skills；loadHistory 會先 await 它，確保渲染前對應表已就緒
+    let userFilterReady = false; // 管理員的「使用者」下拉只在第一次全量載入時建立
+
+    // 將 g.skill_type（可能是資料夾 ID，也可能是舊資料的 folder name）轉成中文名稱
+    function skillLabel(skillType) {
+      if (!skillType) return '-';
+      return skillIdToName[skillType] || SKILL_NAMES[skillType] || skillType;
+    }
+
+    // 載入 skills 並建立 ID→中文 對應表（同時填入 Skill 篩選下拉）；以快取 Promise 確保只抓一次
+    function loadSkillMap() {
+      if (!skillMapPromise) {
+        skillMapPromise = API.listSkills().then(data => {
+          const sel = document.getElementById('filter-skill');
+          (data.skills || []).forEach(s => {
+            const label = SKILL_NAMES[s.name] || s.name;
+            skillIdToName[s.id] = label;     // 新資料：skill_type 存資料夾 ID
+            skillIdToName[s.name] = label;    // 舊資料：可能存資料夾名稱，一併對應
+            sel.innerHTML += `<option value="${s.id}">${UI.escapeHtml(label)}</option>`;
+          });
+        }).catch(() => {});
+      }
+      return skillMapPromise;
+    }
+
+    // 新增者：取 email 在 @ 前的前綴；舊資料沒記錄的一律顯示 flyingfive
+    function creatorName(g) {
+      const e = (g.generated_by || '').trim();
+      return e ? e.split('@')[0] : 'flyingfive';
+    }
+
+    async function init() {
+      // Load product list for filter
+      try {
+        const data = await API.listProducts();
+        const sel = document.getElementById('filter-product');
+        (data.products || []).forEach(p => {
+          sel.innerHTML += `<option value="${p.id}">${UI.escapeHtml(p.name)}</option>`;
+        });
+      } catch (e) {}
+
+      loadSkillMap(); // 開始載入 skills 對應表（loadHistory 內會 await）
+      // 不自動載入全部紀錄；等使用者選好「產品」或「Skill」才載入
+      showSelectPrompt();
+    }
+
+    // 尚未選擇任何條件時的提示（取代原本一進頁就抓全部）
+    function showSelectPrompt() {
+      document.getElementById('result-count').textContent = '';
+      document.getElementById('history-list').innerHTML = `
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <h3>請先選擇條件</h3>
+          <p>在上方選擇「產品」或「Skill」後，才會載入對應的產出紀錄</p>
+        </div>`;
+    }
+
+    async function loadHistory() {
+      // 先確保 skill 對應表就緒，渲染時才不會先顯示 ID 再變中文
+      await loadSkillMap();
+
+      const productId = document.getElementById('filter-product').value;
+      const skillType = document.getElementById('filter-skill').value;
+      const userSel = document.getElementById('filter-user');
+      const generatedBy = userSel ? userSel.value : '';
+
+      // 三個篩選都沒選 → 回到「請先選擇」提示，不抓資料
+      if (!productId && !skillType && !generatedBy) {
+        showSelectPrompt();
+        return;
+      }
+
+      // 抓取時顯示載入中
+      document.getElementById('history-list').innerHTML =
+        '<div class="empty-state"><div class="loading-spinner"></div><p class="mt-2">載入中...</p></div>';
+
+      try {
+        // 只在尚未建立使用者下拉時，請後端一併回傳使用者清單（之後就不再重抓）
+        const data = await API.listGenerations({ productId, skillType, generatedBy, withUsers: !userFilterReady });
+        generations = data.generations || [];
+        isAdminView = !!data.isAdmin;
+        const scope = isAdminView ? '（管理員：顯示所有人的紀錄）' : '（僅顯示你的紀錄）';
+        document.getElementById('result-count').textContent = `共 ${generations.length} 筆 ${scope}`;
+        populateUserFilter(data);
+        renderHistory();
+      } catch (e) {
+        document.getElementById('history-list').innerHTML =
+          `<div class="empty-state"><h3>載入失敗</h3><p>${UI.escapeHtml(e.message)}</p></div>`;
+      }
+    }
+
+    // 管理員專用：用後端回傳的使用者清單建立「使用者」下拉（只建一次，避免被篩選結果縮減）
+    function populateUserFilter(data) {
+      const wrap = document.getElementById('user-filter-wrap');
+      const sel = document.getElementById('filter-user');
+      if (!data.isAdmin) { if (wrap) wrap.classList.add('hidden'); return; }
+      if (wrap) wrap.classList.remove('hidden');
+      if (userFilterReady || !sel) return;
+      const users = data.users || [];
+      users.forEach(email => {
+        const label = email || '（未記錄）';
+        sel.innerHTML += `<option value="${UI.escapeHtml(email)}">${UI.escapeHtml(label)}</option>`;
+      });
+      userFilterReady = true;
+    }
+
+    function renderHistory() {
+      const el = document.getElementById('history-list');
+      if (generations.length === 0) {
+        el.innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <h3>還沒有產出紀錄</h3>
+            <p>前往「文案產出」頁面開始第一次產出</p>
+          </div>`;
+        return;
+      }
+
+      el.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>產品</th>
+                <th>Skill</th>
+                ${isAdminView ? '<th>新增者</th>' : ''}
+                <th>指令摘要</th>
+                <th>修改次數</th>
+                <th>Token</th>
+                <th>產出時間</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${generations.map(g => `
+                <tr>
+                  <td style="font-weight:500;">${UI.escapeHtml(g.product_name || '-')}</td>
+                  <td><span class="badge badge-active">${UI.escapeHtml(skillLabel(g.skill_type))}</span></td>
+                  ${isAdminView ? `<td class="text-muted text-sm">${UI.escapeHtml(creatorName(g))}</td>` : ''}
+                  <td class="text-muted">${UI.escapeHtml(UI.truncate(g.user_prompt, 30))}</td>
+                  <td>${g.revision_count || 0}</td>
+                  <td class="text-sm text-muted">${(g.input_tokens || 0) + (g.output_tokens || 0)}</td>
+                  <td class="text-sm text-muted">${UI.formatDateTime(g.created_at)}</td>
+                  <td>
+                    <button class="btn btn-sm btn-secondary" onclick="showDetail('${g.id}')">查看</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    async function showDetail(id) {
+      try {
+        const data = await API.getGeneration(id);
+        const g = data.generation;
+        document.getElementById('detail-title').textContent = `${g.product_name || '產品'} — ${skillLabel(g.skill_type)}`;
+        document.getElementById('detail-meta').innerHTML =
+          `產出時間：${UI.formatDateTime(g.created_at)} | 修改次數：${g.revision_count || 0} | Token：${(g.input_tokens||0)+(g.output_tokens||0)}`;
+        document.getElementById('detail-content').textContent = g.output_content || '';
+        document.getElementById('detail-modal').classList.remove('hidden');
+      } catch (e) {
+        UI.toast(e.message, 'error');
+      }
+    }
+
+    function closeDetail() {
+      document.getElementById('detail-modal').classList.add('hidden');
+    }
+
+    function copyDetailContent() {
+      const text = document.getElementById('detail-content').textContent;
+      navigator.clipboard.writeText(text)
+        .then(() => UI.toast('已複製', 'success'))
+        .catch(() => UI.toast('複製失敗', 'error'));
+    }
+
+    init();
+  </script>
+</body>
+</html>

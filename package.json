@@ -1,0 +1,14 @@
+{
+  "name": "zeczec-copywriting-system",
+  "version": "1.0.0",
+  "description": "嘖嘖內部文案產出系統",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler pages dev public --binding ANTHROPIC_API_KEY=test GOOGLE_SHEET_ID=test GOOGLE_DRIVE_FOLDER_ID=test GOOGLE_DRIVE_SKILLS_FOLDER_ID=test GOOGLE_DRIVE_MEMORY_FOLDER_ID=test",
+    "deploy": "wrangler pages deploy public --project-name zeczec-copywriting"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

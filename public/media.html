@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>媒體指引 — flyingV 文案系統</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content" id="task-main"></main>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    window.TASK_CONFIG = {
+      skillKey: 'media-guide',
+      title: '媒體指引',
+      desc: '依產品資訊產出媒體投放與宣傳指引，並存成 Google Doc。',
+      saveTarget: 'doc',
+      placeholder: '例：\n預算集中在 Meta 與 Google\n主打族群偏年輕、重視性價比'
+    };
+  </script>
+  <script src="/js/task-runner.js"></script>
+</body>
+</html>

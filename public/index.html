@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>產品列表 — flyingV 文案系統</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .file-drop-zone {
+      border: 2px dashed var(--gray-300);
+      border-radius: 8px;
+      padding: 24px 16px;
+      text-align: center;
+      color: var(--gray-400);
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .file-drop-zone:hover { border-color: #1a73e8; color: #1a73e8; }
+    .file-drop-zone.dragover { border-color: #1a73e8; background: rgba(26,115,232,0.06); color: #1a73e8; }
+    .file-drop-zone svg { display: block; margin: 0 auto 8px; }
+    .file-drop-zone p { margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <!-- Main -->
+    <main class="main-content">
+      <div class="page-header">
+        <h2>產品列表</h2>
+        <div class="flex gap-2">
+          <button class="btn btn-secondary" onclick="openFileImportModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+            產品檔案匯入
+          </button>
+          <button class="btn btn-secondary" onclick="openImportModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Sheet 匯入
+          </button>
+          <a href="/product.html" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            手動新增
+          </a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="form-group" style="margin-bottom:16px; position:relative;">
+          <svg style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--gray-400); pointer-events:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="product-search" placeholder="搜尋產品名稱、描述或新增者…" oninput="onSearchInput()" style="padding-left:38px;">
+        </div>
+        <div id="product-list">
+          <div class="empty-state">
+            <div class="loading-spinner"></div>
+            <p class="mt-2">載入中...</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Import from Sheet Modal -->
+  <div id="import-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeImportModal()">
+    <div class="modal">
+      <h3>從 Google Sheet 匯入產品</h3>
+      <p class="text-muted text-sm mb-4">貼上 PM 的策略表連結，系統會自動讀取並對應欄位。</p>
+      <div class="form-group">
+        <label>Google Sheet 連結</label>
+        <input type="url" id="import-sheet-url" placeholder="https://docs.google.com/spreadsheets/d/...">
+      </div>
+      <div id="import-mapping" class="hidden">
+        <p class="text-sm mb-2" style="font-weight:600;">欄位對應</p>
+        <p class="text-muted text-sm mb-4">系統偵測到 Sheet 的欄位如下，請確認對應是否正確：</p>
+        <div id="mapping-fields"></div>
+      </div>
+      <div class="flex gap-2" style="justify-content:flex-end; margin-top:20px;">
+        <button class="btn btn-secondary" onclick="closeImportModal()">取消</button>
+        <button class="btn btn-primary" id="import-btn" onclick="handleImport()">讀取 Sheet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- File Import Modal -->
+  <div id="file-import-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeFileImportModal()">
+    <div class="modal">
+      <h3>上傳產品檔案自動填寫</h3>
+      <p class="text-muted text-sm mb-4">上傳募資簡報、產品型錄、產品照片或網頁，系統會自動辨識並填入產品欄位。<strong>找不到的欄位會留白，不會編造。</strong></p>
+      <div class="form-group">
+        <label>選擇檔案（可多選 · 可直接拖曳檔案進來）</label>
+        <div id="file-drop-zone" class="file-drop-zone" onclick="document.getElementById('file-import-input').click()">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p class="text-sm"><strong>點此選擇檔案</strong>，或將檔案拖曳到這個區塊</p>
+        </div>
+        <input type="file" id="file-import-input" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.htm,.html,.md,.markdown,.txt" multiple onchange="renderSelectedFiles()" style="display:none;">
+        <p class="text-muted text-sm mt-2">支援格式：PDF、PNG、JPG、GIF、WebP、HTML、Markdown(.md)、純文字(.txt)。<strong>動畫 GIF 只讀第一格；HEIC（iPhone 照片）請先轉 JPG；PPT / Keynote 請先另存為 PDF。</strong>單檔上限 25MB，圖片一次最多 12 張（太多請分批）。</p>
+      </div>
+      <div id="file-import-list" class="text-sm mb-2"></div>
+      <div class="form-group">
+        <label>或直接貼上文字 <span class="optional">選填</span></label>
+        <textarea id="file-import-text" rows="4" placeholder="把產品介紹文字貼進來，會和上面的檔案一起辨識、自動對應欄位。"></textarea>
+      </div>
+      <div class="flex gap-2" style="justify-content:flex-end; margin-top:20px;">
+        <button class="btn btn-secondary" onclick="closeFileImportModal()">取消</button>
+        <button class="btn btn-primary" id="file-import-btn" onclick="handleFileImport()">開始辨識</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    let products = [];
+    let searchQuery = '';
+
+    function onSearchInput() {
+      searchQuery = (document.getElementById('product-search').value || '').trim().toLowerCase();
+      renderProducts();
+    }
+
+    async function loadProducts() {
+      try {
+        const data = await API.listProducts();
+        products = data.products || [];
+        renderProducts();
+      } catch (e) {
+        document.getElementById('product-list').innerHTML =
+          `<div class="empty-state"><h3>載入失敗</h3><p>${UI.escapeHtml(e.message)}</p></div>`;
+      }
+    }
+
+    // 新增者：取 email 在 @ 前的前綴；舊資料沒記錄的一律顯示 flyingfive
+    function creatorName(p) {
+      const e = (p.created_by || '').trim();
+      return e ? e.split('@')[0] : 'flyingfive';
+    }
+
+    function renderProducts() {
+      const el = document.getElementById('product-list');
+      if (products.length === 0) {
+        el.innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <h3>還沒有產品</h3>
+            <p>點擊「新增產品」開始建立第一筆產品資料</p>
+          </div>`;
+        return;
+      }
+
+      // 依搜尋字串過濾（產品名稱、一句話描述、新增者）
+      const list = searchQuery
+        ? products.filter(p =>
+            [p.name, p.one_liner, creatorName(p)]
+              .some(v => (v || '').toLowerCase().includes(searchQuery)))
+        : products;
+
+      if (list.length === 0) {
+        el.innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <h3>找不到符合「${UI.escapeHtml(searchQuery)}」的產品</h3>
+            <p>試試其他關鍵字</p>
+          </div>`;
+        return;
+      }
+
+      el.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>產品名稱</th>
+                <th>一句話描述</th>
+                <th>新增者</th>
+                <th>狀態</th>
+                <th>建立日期</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${list.map(p => `
+                <tr>
+                  <td><a href="/product.html?id=${p.id}" style="color:var(--gray-900);font-weight:700;">${UI.escapeHtml(p.name)}</a></td>
+                  <td class="text-muted">${UI.escapeHtml(UI.truncate(p.one_liner, 40))}</td>
+                  <td class="text-muted text-sm">${UI.escapeHtml(creatorName(p))}</td>
+                  <td><span class="badge badge-${p.status === 'active' ? 'active' : p.status === 'completed' ? 'completed' : 'draft'}">${p.status || '草稿'}</span></td>
+                  <td class="text-muted text-sm">${UI.formatDate(p.created_at)}</td>
+                  <td>
+                    <div class="flex gap-2">
+                      <a href="/product.html?id=${p.id}" class="btn btn-sm btn-dark">修改</a>
+                      <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}', '${UI.escapeHtml(p.name)}')">刪除</button>
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    async function deleteProduct(id, name) {
+      if (!UI.confirm(`確定要刪除「${name}」嗎？此操作無法復原。`)) return;
+      try {
+        await API.deleteProduct(id);
+        UI.toast('已刪除', 'success');
+        loadProducts();
+      } catch (e) {
+        UI.toast(e.message, 'error');
+      }
+    }
+
+    function openImportModal() {
+      document.getElementById('import-modal').classList.remove('hidden');
+      document.getElementById('import-sheet-url').value = '';
+      document.getElementById('import-mapping').classList.add('hidden');
+      document.getElementById('import-btn').textContent = '讀取 Sheet';
+    }
+
+    function closeImportModal() {
+      document.getElementById('import-modal').classList.add('hidden');
+    }
+
+    let importStep = 'url'; // 'url' | 'confirm'
+    let importData = null;
+
+    async function handleImport() {
+      const url = document.getElementById('import-sheet-url').value.trim();
+      if (!url) { UI.toast('請輸入 Sheet 連結', 'error'); return; }
+
+      if (importStep === 'url') {
+        // Step 1: read sheet and show mapping
+        document.getElementById('import-btn').textContent = '讀取中...';
+        document.getElementById('import-btn').disabled = true;
+        try {
+          const data = await API.importFromSheet(url, null);
+          importData = data;
+          // Show detected columns for mapping
+          const mappingEl = document.getElementById('mapping-fields');
+          mappingEl.innerHTML = (data.detectedColumns || []).map(col =>
+            `<div class="flex items-center gap-2 mb-2">
+              <span class="text-sm" style="width:120px;">${UI.escapeHtml(col.sheetColumn)}</span>
+              <span class="text-muted">→</span>
+              <select class="mapping-select" data-sheet-col="${UI.escapeHtml(col.sheetColumn)}" style="padding:6px;border:1px solid var(--gray-300);border-radius:4px;font-size:13px;">
+                <option value="">（跳過）</option>
+                <option value="name" ${col.mapped === 'name' ? 'selected' : ''}>產品名稱</option>
+                <option value="one_liner" ${col.mapped === 'one_liner' ? 'selected' : ''}>一句話描述</option>
+                <option value="category" ${col.mapped === 'category' ? 'selected' : ''}>產品類別</option>
+                <option value="selling_points" ${col.mapped === 'selling_points' ? 'selected' : ''}>賣點</option>
+                <option value="specs" ${col.mapped === 'specs' ? 'selected' : ''}>規格</option>
+                <option value="core_audience" ${col.mapped === 'core_audience' ? 'selected' : ''}>核心受眾</option>
+                <option value="secondary_audience" ${col.mapped === 'secondary_audience' ? 'selected' : ''}>次要受眾</option>
+                <option value="competitors" ${col.mapped === 'competitors' ? 'selected' : ''}>競爭對手</option>
+                <option value="main_advantage" ${col.mapped === 'main_advantage' ? 'selected' : ''}>主要優勢</option>
+                <option value="brand_story" ${col.mapped === 'brand_story' ? 'selected' : ''}>品牌故事</option>
+              </select>
+            </div>`
+          ).join('');
+          document.getElementById('import-mapping').classList.remove('hidden');
+          document.getElementById('import-btn').textContent = '確認匯入';
+          importStep = 'confirm';
+        } catch (e) {
+          UI.toast(e.message, 'error');
+          document.getElementById('import-btn').textContent = '讀取 Sheet';
+        }
+        document.getElementById('import-btn').disabled = false;
+      } else {
+        // Step 2: confirm and import with mappings
+        const mappings = {};
+        document.querySelectorAll('.mapping-select').forEach(sel => {
+          if (sel.value) mappings[sel.dataset.sheetCol] = sel.value;
+        });
+        document.getElementById('import-btn').textContent = '匯入中...';
+        document.getElementById('import-btn').disabled = true;
+        try {
+          await API.importFromSheet(url, mappings);
+          UI.toast('匯入成功！', 'success');
+          closeImportModal();
+          importStep = 'url';
+          loadProducts();
+        } catch (e) {
+          UI.toast(e.message, 'error');
+          document.getElementById('import-btn').textContent = '確認匯入';
+        }
+        document.getElementById('import-btn').disabled = false;
+      }
+    }
+
+    // === File Import ===
+    let droppedFiles = [];
+
+    function openFileImportModal() {
+      document.getElementById('file-import-modal').classList.remove('hidden');
+      document.getElementById('file-import-input').value = '';
+      document.getElementById('file-import-list').innerHTML = '';
+      document.getElementById('file-import-text').value = '';
+      droppedFiles = [];
+      const btn = document.getElementById('file-import-btn');
+      btn.textContent = '開始辨識';
+      btn.disabled = false;
+    }
+
+    // 收集目前選到的檔案（input 選的 + 拖曳進來的）
+    function collectFiles() {
+      const inputFiles = Array.from(document.getElementById('file-import-input').files || []);
+      const all = inputFiles.concat(droppedFiles);
+      // 以「檔名+大小」去重
+      const seen = new Set();
+      return all.filter(f => {
+        const key = f.name + ':' + f.size;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    // 拖曳上傳
+    (function setupDropZone() {
+      const zone = document.getElementById('file-drop-zone');
+      if (!zone) return;
+      ['dragenter', 'dragover'].forEach(ev =>
+        zone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); zone.classList.add('dragover'); }));
+      ['dragleave', 'drop'].forEach(ev =>
+        zone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); zone.classList.remove('dragover'); }));
+      zone.addEventListener('drop', e => {
+        const files = Array.from(e.dataTransfer.files || []);
+        droppedFiles = droppedFiles.concat(files);
+        renderSelectedFiles();
+      });
+    })();
+
+    function closeFileImportModal() {
+      document.getElementById('file-import-modal').classList.add('hidden');
+    }
+
+    function renderSelectedFiles() {
+      const files = collectFiles();
+      const el = document.getElementById('file-import-list');
+      if (!files.length) { el.innerHTML = ''; return; }
+      el.innerHTML = files.map(f =>
+        `<div style="color:#1a73e8;font-weight:500;">• ${UI.escapeHtml(f.name)} <span class="text-sm">(${(f.size / 1024 / 1024).toFixed(1)} MB)</span></div>`
+      ).join('');
+    }
+
+    const MEDIA_TYPES = {
+      pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+      gif: 'image/gif', webp: 'image/webp',
+      htm: 'text/html', html: 'text/html',
+      md: 'text/plain', markdown: 'text/plain', txt: 'text/plain'
+    };
+
+    // 把 UTF-8 文字編成 base64（與後端 decodeBase64Utf8 對應）
+    function textToBase64Utf8(str) {
+      const bytes = new TextEncoder().encode(str);
+      let bin = '';
+      bytes.forEach(b => { bin += String.fromCharCode(b); });
+      return btoa(bin);
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = () => reject(new Error('讀取檔案失敗'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Anthropic 多圖請求限制：每張圖任一邊 ≤ 2000px。上傳前把長邊縮到 1280
+    // （低於官方建議的 1568，進一步壓低每張圖的 input token，避免多圖時撞到每分鐘速率上限）。
+    const IMG_MAX_DIM = 1280;
+    const MAX_IMAGES = 12;                       // 一次最多圖片張數（避免超過 AI 單次/用量上限）
+    const MAX_TOTAL_B64 = 18 * 1024 * 1024;      // 壓縮後 base64 總量上限（約 18MB）
+
+    // 回傳要送給後端的 part：{ name, mediaType, data }。圖片過大會等比縮小並轉 JPEG。
+    function prepareFilePart(f) {
+      const ext = (f.name.split('.').pop() || '').toLowerCase();
+      const mediaType = MEDIA_TYPES[ext];
+      if (mediaType && mediaType.indexOf('image/') === 0) return imageToPart(f, mediaType);
+      return fileToBase64(f).then(data => ({ name: f.name, mediaType, data }));
+    }
+
+    // 一律把圖片重新編碼成單幀 JPEG（長邊上限 1280）：
+    // 動畫 GIF 會被壓成一幀（解決「尺寸小但檔案超肥」整顆送出撐爆的問題），透明底填白避免變黑。
+    function imageToPart(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const maxSide = Math.max(img.width, img.height) || 1;
+            const scale = maxSide > IMG_MAX_DIM ? IMG_MAX_DIM / maxSide : 1;
+            const w = Math.max(1, Math.round(img.width * scale));
+            const h = Math.max(1, Math.round(img.height * scale));
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            const out = canvas.toDataURL('image/jpeg', 0.85);
+            resolve({ name: file.name, mediaType: 'image/jpeg', data: out.split(',')[1] });
+          };
+          img.onerror = () => reject(new Error(`圖片載入失敗：${file.name}`));
+          img.src = reader.result;
+        };
+        reader.onerror = () => reject(new Error('讀取檔案失敗'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleFileImport() {
+      const files = collectFiles();
+      const pastedText = (document.getElementById('file-import-text').value || '').trim();
+      if (!files.length && !pastedText) { UI.toast('請先選擇檔案或貼上文字', 'error'); return; }
+
+      let imageCount = 0;
+      for (const f of files) {
+        const ext = (f.name.split('.').pop() || '').toLowerCase();
+        if (!MEDIA_TYPES[ext]) {
+          UI.toast(`不支援的格式：${f.name}。PPT / Keynote 請先轉成 PDF`, 'error');
+          return;
+        }
+        if (f.size > 25 * 1024 * 1024) {
+          UI.toast(`${f.name} 超過 25MB，請壓縮或拆分`, 'error');
+          return;
+        }
+        if ((MEDIA_TYPES[ext] || '').indexOf('image/') === 0) imageCount++;
+      }
+      // 圖片張數上限：太多會超過 AI 單次上限／用量上限，請分批
+      if (imageCount > MAX_IMAGES) {
+        UI.toast(`一次選了 ${imageCount} 張圖片，超過建議上限 ${MAX_IMAGES} 張。請分批匯入（一次 ≤ ${MAX_IMAGES} 張），或改上傳 PDF／貼上文字。`, 'error');
+        return;
+      }
+
+      const btn = document.getElementById('file-import-btn');
+      btn.textContent = '壓縮中...';
+      btn.disabled = true;
+      try {
+        const payload = await Promise.all(files.map(prepareFilePart));
+        if (pastedText) {
+          payload.push({
+            name: '貼上的文字',
+            mediaType: 'text/plain',
+            data: textToBase64Utf8(pastedText)
+          });
+        }
+        // 壓縮後仍超過 AI 單次上限 → 清楚提示分批
+        const totalB64 = payload.reduce((s, p) => s + (p.data ? p.data.length : 0), 0);
+        if (totalB64 > MAX_TOTAL_B64) {
+          throw new Error(`壓縮後內容仍約 ${(totalB64 / 1024 / 1024).toFixed(1)}MB，超過 AI 單次上限。請減少張數、分批上傳，或改上傳 PDF／貼文字。`);
+        }
+        btn.textContent = '辨識中...';
+        const data = await API.extractProduct(payload);
+        sessionStorage.setItem('importedProduct', JSON.stringify(data.product || {}));
+        UI.toast('辨識完成，正在帶入欄位...', 'success');
+        window.location.href = '/product.html';
+      } catch (e) {
+        UI.toast(e.message, 'error');
+        btn.textContent = '開始辨識';
+        btn.disabled = false;
+      }
+    }
+
+    // Init
+    loadProducts();
+  </script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>結案倒數 — flyingV 文案系統</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content" id="task-main"></main>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    window.TASK_CONFIG = {
+      skillKey: 'closing-countdown',
+      title: '結案倒數',
+      desc: '募資結案前的最後衝刺文案，催出臨門一腳的轉換。',
+      placeholder: '例：\n結案倒數 48 小時、24 小時、最後 3 小時各一篇\n強調錯過就沒有的急迫感'
+    };
+  </script>
+  <script src="/js/task-runner.js"></script>
+</body>
+</html>

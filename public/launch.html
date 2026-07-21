@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>開賣倒數 — flyingV 文案系統</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content" id="task-main"></main>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    window.TASK_CONFIG = {
+      skillKey: 'launch-countdown',
+      title: '開賣倒數',
+      desc: '開賣前的倒數宣傳文案，營造期待與急迫感。',
+      placeholder: '例：\n倒數 3 天、倒數 1 天、開賣當天各一篇\n語氣熱血一點'
+    };
+  </script>
+  <script src="/js/task-runner.js"></script>
+</body>
+</html>

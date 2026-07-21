@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文案產出 — flyingV 文案系統</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .generate-layout { display: grid; grid-template-columns: 320px 1fr; gap: 24px; }
+    .sidebar-panel { position: sticky; top: 32px; }
+    .revision-input { display: flex; gap: 8px; margin-top: 16px; align-items: flex-end; }
+    .revision-input textarea { flex: 1; resize: none; min-height: 44px; max-height: 200px; line-height: 1.5; overflow-y: auto; }
+    .token-info { font-size: 12px; color: var(--gray-400); margin-top: 8px; }
+    .output-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .btn-drive { background: #1a73e8; color: #fff; border: none; }
+    .btn-drive:hover { background: #1557b0; }
+    .btn-sheets { background: #0f9d58; color: #fff; border: none; }
+    .btn-sheets:hover { background: #0b8043; }
+    .btn-typeform { background: #262627; color: #fff; border: none; }
+    .btn-typeform:hover { background: #404041; }
+    .drive-result { margin-top: 12px; padding: 12px 16px; background: rgba(26,115,232,0.08); border-radius: 8px; font-size: 14px; }
+    .drive-result a { color: #1a73e8; font-weight: 600; text-decoration: none; }
+    .drive-result a:hover { text-decoration: underline; }
+    @media (max-width: 960px) {
+      .generate-layout { grid-template-columns: 1fr; }
+      .sidebar-panel { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h2>文案產出</h2>
+      </div>
+
+      <div class="generate-layout">
+        <!-- Left: Settings Panel -->
+        <div class="sidebar-panel">
+          <div class="card">
+            <div class="form-section">
+              <h3>產出設定</h3>
+
+              <div class="form-group">
+                <label>選擇產品 *</label>
+                <select id="product-select" onchange="onProductChange()">
+                  <option value="">載入中...</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>選擇 Skill *</label>
+                <div id="skill-list" class="skill-grid">
+                  <div class="text-muted text-sm">載入中...</div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>補充指令 <span class="optional">選填</span></label>
+                <textarea id="user-prompt" rows="4" placeholder="例：&#10;幫我寫一篇開賣首日的 FB 貼文&#10;語氣輕鬆一點，目標受眾是年輕上班族"></textarea>
+              </div>
+
+              <button class="btn btn-primary btn-lg" style="width:100%;" id="generate-btn" onclick="startGenerate()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                開始產出
+              </button>
+            </div>
+          </div>
+
+          <!-- Selected product info -->
+          <div class="card hidden" id="product-info-card">
+            <h4 class="text-sm" style="font-weight:600; margin-bottom:8px;">產品資訊摘要</h4>
+            <div id="product-info" class="text-sm text-muted"></div>
+          </div>
+        </div>
+
+        <!-- Right: Output Area -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <h3 style="font-size:16px; margin:0; padding:0; border:0;">產出結果</h3>
+              <div id="status-badge" class="text-sm text-muted">等待產出</div>
+            </div>
+
+            <!-- Conversation view -->
+            <div id="conversation" class="conversation">
+              <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;">
+                  <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                </svg>
+                <h3>選擇產品和 Skill 後開始產出</h3>
+                <p>AI 會根據產品資訊和文案方法論，產出符合風格的文案</p>
+              </div>
+            </div>
+
+            <!-- Revision input (shown after first output) -->
+            <div id="revision-area" class="hidden">
+              <div class="revision-input">
+                <textarea id="revision-input" rows="1" placeholder="輸入修改指令，例：「語氣再強烈一點」「加入價格比較」（Enter 送出 · Shift+Enter 換行）"></textarea>
+                <button class="btn btn-primary" onclick="sendRevision()">修改</button>
+              </div>
+              <div class="output-actions">
+                <button class="btn btn-sm btn-drive" onclick="saveToDrive()" id="drive-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  存到 Google Drive
+                </button>
+                <button class="btn btn-sm btn-sheets hidden" onclick="saveToSheets()" id="sheets-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                  存到 Google Sheets
+                </button>
+                <button class="btn btn-sm btn-typeform hidden" onclick="createTypeform()" id="typeform-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                  建立 Typeform 問卷
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="copyOutput()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  複製文案
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="resetConversation()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                  重新開始
+                </button>
+              </div>
+              <div id="drive-result" class="drive-result hidden"></div>
+              <div class="token-info" id="token-info"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    let selectedProduct = null;
+    let selectedSkill = null;
+    let conversationHistory = [];
+    let latestOutput = '';
+    let isStreaming = false;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let autoContinueCount = 0;
+    const MAX_AUTO_CONTINUE = 5; // 最多自動續寫 5 次
+
+    // === Init ===
+    async function init() {
+      setupRevisionInput();
+      await Promise.all([loadProducts(), loadSkills()]);
+
+      // Auto-select product from URL
+      const pid = UI.getUrlParam('productId');
+      if (pid) {
+        document.getElementById('product-select').value = pid;
+        onProductChange();
+      }
+    }
+
+    // 對話框：Enter 送出（避開中文輸入法組字）、Shift+Enter 換行、自動長高
+    function setupRevisionInput() {
+      const input = document.getElementById('revision-input');
+      if (!input) return;
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+          e.preventDefault();
+          sendRevision();
+        }
+      });
+      input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 200) + 'px';
+      });
+    }
+
+    async function loadProducts() {
+      try {
+        const data = await API.listProducts();
+        const select = document.getElementById('product-select');
+        select.innerHTML = '<option value="">選擇產品...</option>' +
+          (data.products || []).map(p =>
+            `<option value="${p.id}">${UI.escapeHtml(p.name)}</option>`
+          ).join('');
+      } catch (e) {
+        UI.toast('無法載入產品', 'error');
+      }
+    }
+
+    async function loadSkills() {
+      try {
+        const data = await API.listSkills();
+        const el = document.getElementById('skill-list');
+        const skills = data.skills || [];
+        if (skills.length === 0) {
+          el.innerHTML = '<p class="text-muted text-sm">尚未上傳任何 Skill</p>';
+          return;
+        }
+        el.innerHTML = skills.map(s => `
+          <div class="skill-card" data-skill-id="${s.id}" onclick="selectSkill('${s.id}', '${UI.escapeHtml(s.name)}')">
+            <h4>${UI.escapeHtml(SKILL_NAMES[s.name] || s.name)}</h4>
+            <p>${UI.escapeHtml(UI.truncate(s.description || '', 50))}</p>
+          </div>
+        `).join('');
+      } catch (e) {
+        document.getElementById('skill-list').innerHTML =
+          '<p class="text-muted text-sm">載入 Skills 失敗</p>';
+      }
+    }
+
+    async function onProductChange() {
+      const pid = document.getElementById('product-select').value;
+      if (!pid) {
+        selectedProduct = null;
+        document.getElementById('product-info-card').classList.add('hidden');
+        return;
+      }
+      try {
+        const data = await API.getProduct(pid);
+        selectedProduct = data.product;
+        const infoEl = document.getElementById('product-info');
+        infoEl.innerHTML = `
+          <p><strong>${UI.escapeHtml(selectedProduct.name)}</strong></p>
+          <p>${UI.escapeHtml(selectedProduct.one_liner || '')}</p>
+          ${selectedProduct.core_audience ? `<p>核心受眾：${UI.escapeHtml(UI.truncate(selectedProduct.core_audience, 60))}</p>` : ''}
+          ${selectedProduct.selling_points ? `<p>賣點：${UI.escapeHtml(UI.truncate(selectedProduct.selling_points, 80))}</p>` : ''}
+        `;
+        document.getElementById('product-info-card').classList.remove('hidden');
+      } catch (e) {
+        UI.toast(e.message, 'error');
+      }
+    }
+
+    // Skills that produce specific output types
+    const SHEET_SKILLS = ['persona-matrix'];
+    const TYPEFORM_SKILLS = ['crowdfunding-survey'];
+
+    function selectSkill(id, name) {
+      selectedSkill = { id, name };
+      document.querySelectorAll('.skill-card').forEach(c => c.classList.remove('selected'));
+      document.querySelector(`.skill-card[data-skill-id="${id}"]`)?.classList.add('selected');
+
+      // Show/hide special buttons based on skill type
+      const sheetsBtn = document.getElementById('sheets-btn');
+      const typeformBtn = document.getElementById('typeform-btn');
+      if (sheetsBtn) {
+        if (SHEET_SKILLS.includes(name)) sheetsBtn.classList.remove('hidden');
+        else sheetsBtn.classList.add('hidden');
+      }
+      if (typeformBtn) {
+        if (TYPEFORM_SKILLS.includes(name)) typeformBtn.classList.remove('hidden');
+        else typeformBtn.classList.add('hidden');
+      }
+    }
+
+    // === Generation ===
+    async function startGenerate() {
+      if (!selectedProduct) { UI.toast('請先選擇產品', 'error'); return; }
+      if (!selectedSkill) { UI.toast('請先選擇 Skill', 'error'); return; }
+      if (isStreaming) return;
+
+      const prompt = document.getElementById('user-prompt').value.trim();
+      const convEl = document.getElementById('conversation');
+
+      // Clear previous conversation
+      conversationHistory = [];
+      latestOutput = '';
+      convEl.innerHTML = '';
+      totalInputTokens = 0;
+      totalOutputTokens = 0;
+      autoContinueCount = 0;
+
+      // Show user message
+      if (prompt) {
+        appendMessage('user', prompt);
+        conversationHistory.push({ role: 'user', content: prompt });
+      }
+
+      // Start streaming
+      appendStreamingMessage();
+      setStreaming(true);
+
+      streamWithAutoContinue({
+        productId: selectedProduct.id,
+        skillType: selectedSkill.id,
+        prompt: prompt || `請根據產品資訊，使用 ${selectedSkill.name} 技能產出文案。`,
+        conversationHistory: []
+      });
+    }
+
+    // === Auto-continue: 被截斷時自動續寫 ===
+    function streamWithAutoContinue(params) {
+      const callbacks = {
+        onToken(text) {
+          latestOutput += text;
+          updateStreamingMessage(latestOutput);
+        },
+        onDone() {
+          finalizeStreamingMessage();
+          conversationHistory.push({ role: 'assistant', content: latestOutput });
+          setStreaming(false);
+          document.getElementById('revision-area').classList.remove('hidden');
+          updateTokenInfo();
+        },
+        onTruncated() {
+          // AI 被截斷了，自動續寫（不清空 latestOutput，畫面持續累積、不閃斷）
+          if (autoContinueCount >= MAX_AUTO_CONTINUE) {
+            finalizeStreamingMessage();
+            conversationHistory.push({ role: 'assistant', content: latestOutput });
+            setStreaming(false);
+            document.getElementById('revision-area').classList.remove('hidden');
+            UI.toast('已達續寫上限，可手動輸入「繼續」來延續', 'error');
+            updateTokenInfo();
+            return;
+          }
+          autoContinueCount++;
+          document.getElementById('status-badge').innerHTML = `<div class="loading-spinner" style="width:14px;height:14px;"></div> 續寫中（${autoContinueCount}/${MAX_AUTO_CONTINUE}）`;
+          // 把目前已產出的內容當成 assistant 上一則訊息，請 AI 從中斷處接著寫
+          const continueHistory = (params.conversationHistory || []).concat([
+            { role: 'user', content: params.prompt },
+            { role: 'assistant', content: latestOutput }
+          ]);
+          const continuePrompt = '繼續，從你剛才中斷的地方接著寫，不要重複已經寫過的內容，也不要加任何開場白。';
+          API.streamGenerate({
+            productId: params.productId,
+            skillType: params.skillType,
+            prompt: continuePrompt,
+            conversationHistory: continueHistory
+          }, callbacks);
+        },
+        onError(err) {
+          finalizeStreamingMessage();
+          UI.toast('產出錯誤：' + err, 'error');
+          setStreaming(false);
+        },
+        onMeta(msg) {
+          if (msg?.usage) {
+            totalInputTokens += msg.usage.input_tokens || 0;
+            totalOutputTokens += msg.usage.output_tokens || 0;
+          }
+        }
+      };
+      API.streamGenerate(params, callbacks);
+    }
+
+    async function sendRevision() {
+      const input = document.getElementById('revision-input');
+      const prompt = input.value.trim();
+      if (!prompt || isStreaming) return;
+
+      input.value = '';
+      input.style.height = 'auto';
+      appendMessage('user', prompt);
+      const priorHistory = conversationHistory.slice();
+      conversationHistory.push({ role: 'user', content: prompt });
+      latestOutput = '';
+      autoContinueCount = 0;
+      appendStreamingMessage();
+      setStreaming(true);
+
+      // 走 streamWithAutoContinue，修改也能在被截斷時自動續寫
+      streamWithAutoContinue({
+        productId: selectedProduct.id,
+        skillType: selectedSkill.id,
+        prompt,
+        conversationHistory: priorHistory
+      });
+    }
+
+    // === UI Helpers ===
+    function appendMessage(role, content) {
+      const convEl = document.getElementById('conversation');
+      const div = document.createElement('div');
+      div.className = `message message-${role === 'user' ? 'user' : 'ai'}`;
+      div.innerHTML = `<div class="message-label">${role === 'user' ? '你' : 'AI'}</div><div class="message-content">${UI.escapeHtml(content)}</div>`;
+      convEl.appendChild(div);
+      convEl.scrollTop = convEl.scrollHeight;
+    }
+
+    function appendStreamingMessage() {
+      const convEl = document.getElementById('conversation');
+      const div = document.createElement('div');
+      div.className = 'message message-ai';
+      div.id = 'streaming-msg';
+      div.innerHTML = `<div class="message-label">AI</div><div class="message-content output-area streaming cursor-blink"></div>`;
+      convEl.appendChild(div);
+      convEl.scrollTop = convEl.scrollHeight;
+    }
+
+    function updateStreamingMessage(text) {
+      const el = document.querySelector('#streaming-msg .message-content');
+      if (el) {
+        el.textContent = text;
+        const convEl = document.getElementById('conversation');
+        convEl.scrollTop = convEl.scrollHeight;
+      }
+    }
+
+    function finalizeStreamingMessage() {
+      const el = document.querySelector('#streaming-msg .message-content');
+      if (el) {
+        el.classList.remove('streaming', 'cursor-blink');
+      }
+      const msg = document.getElementById('streaming-msg');
+      if (msg) msg.removeAttribute('id');
+    }
+
+    function setStreaming(streaming) {
+      isStreaming = streaming;
+      const btn = document.getElementById('generate-btn');
+      const badge = document.getElementById('status-badge');
+      if (streaming) {
+        btn.disabled = true;
+        btn.innerHTML = '<div class="loading-spinner"></div> 產出中...';
+        badge.innerHTML = '<div class="loading-spinner" style="width:14px;height:14px;"></div> 產出中';
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> 開始產出`;
+        badge.textContent = '產出完成';
+      }
+    }
+
+    function updateTokenInfo() {
+      const el = document.getElementById('token-info');
+      el.textContent = `Token 使用量：輸入 ${totalInputTokens.toLocaleString()} / 輸出 ${totalOutputTokens.toLocaleString()} | 修改次數：${Math.floor(conversationHistory.filter(m => m.role === 'user').length)}`;
+    }
+
+    function copyOutput() {
+      // Get the latest AI output
+      const lastAi = conversationHistory.filter(m => m.role === 'assistant').pop();
+      if (!lastAi) { UI.toast('沒有可複製的內容', 'error'); return; }
+      navigator.clipboard.writeText(lastAi.content)
+        .then(() => UI.toast('已複製到剪貼簿', 'success'))
+        .catch(() => UI.toast('複製失敗', 'error'));
+    }
+
+    async function createTypeform() {
+      const lastAi = conversationHistory.filter(m => m.role === 'assistant').pop();
+      if (!lastAi) { UI.toast('沒有可建立的內容', 'error'); return; }
+
+      const btn = document.getElementById('typeform-btn');
+      const resultEl = document.getElementById('drive-result');
+      btn.disabled = true;
+      btn.innerHTML = '<div class="loading-spinner" style="width:14px;height:14px;"></div> 建立問卷中（約 15 秒）...';
+
+      try {
+        const res = await fetch('/api/create-typeform', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: lastAi.content,
+            productName: selectedProduct?.name || '產品'
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '建立失敗');
+
+        resultEl.innerHTML = `✅ Typeform 問卷已建立（${data.fieldCount} 題）<br>` +
+          `<a href="${data.formUrl}" target="_blank">📋 預覽問卷</a> ｜ ` +
+          `<a href="${data.editUrl}" target="_blank">✏️ 編輯問卷</a>`;
+        resultEl.classList.remove('hidden');
+        UI.toast('Typeform 問卷已建立', 'success');
+      } catch (e) {
+        UI.toast('建立失敗：' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> 建立 Typeform 問卷`;
+      }
+    }
+
+    async function saveToSheets() {
+      const lastAi = conversationHistory.filter(m => m.role === 'assistant').pop();
+      if (!lastAi) { UI.toast('沒有可儲存的內容', 'error'); return; }
+
+      const btn = document.getElementById('sheets-btn');
+      const resultEl = document.getElementById('drive-result');
+      btn.disabled = true;
+      btn.innerHTML = '<div class="loading-spinner" style="width:14px;height:14px;"></div> 建立中（約 10 秒）...';
+
+      try {
+        const res = await fetch('/api/create-sheet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: lastAi.content,
+            productName: selectedProduct?.name || '產品'
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '建立失敗');
+
+        resultEl.innerHTML = `📊 已建立 Google Sheets — <a href="${data.url}" target="_blank">開啟「${UI.escapeHtml(data.title)}」</a>（${data.audienceCount} 個受眾）`;
+        resultEl.classList.remove('hidden');
+        UI.toast('已建立 Google Sheets', 'success');
+      } catch (e) {
+        UI.toast('建立失敗：' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg> 存到 Google Sheets`;
+      }
+    }
+
+    async function saveToDrive() {
+      const lastAi = conversationHistory.filter(m => m.role === 'assistant').pop();
+      if (!lastAi) { UI.toast('沒有可儲存的內容', 'error'); return; }
+
+      const btn = document.getElementById('drive-btn');
+      const resultEl = document.getElementById('drive-result');
+      btn.disabled = true;
+      btn.innerHTML = '<div class="loading-spinner" style="width:14px;height:14px;"></div> 儲存中...';
+
+      try {
+        const res = await fetch('/api/save-to-drive', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: lastAi.content,
+            productName: selectedProduct?.name || '文案',
+            skillName: selectedSkill?.name || ''
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '儲存失敗');
+
+        resultEl.innerHTML = `✅ 已存到 Google Drive — <a href="${data.docUrl}" target="_blank">開啟「${UI.escapeHtml(data.title)}」</a>`;
+        resultEl.classList.remove('hidden');
+        UI.toast('已儲存到 Google Drive', 'success');
+      } catch (e) {
+        UI.toast('儲存失敗：' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> 存到 Google Drive`;
+      }
+    }
+
+    function resetConversation() {
+      if (isStreaming) return;
+      if (!UI.confirm('確定要重新開始嗎？目前的對話紀錄會被清除。')) return;
+      conversationHistory = [];
+      latestOutput = '';
+      totalInputTokens = 0;
+      totalOutputTokens = 0;
+      document.getElementById('conversation').innerHTML = `
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+          <h3>選擇產品和 Skill 後開始產出</h3>
+          <p>AI 會根據產品資訊和文案方法論，產出符合風格的文案</p>
+        </div>`;
+      document.getElementById('revision-area').classList.add('hidden');
+      document.getElementById('drive-result').classList.add('hidden');
+      document.getElementById('status-badge').textContent = '等待產出';
+      document.getElementById('token-info').textContent = '';
+    }
+
+    init();
+  </script>
+</body>
+</html>
