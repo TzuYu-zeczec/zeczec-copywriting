@@ -1,13 +1,13 @@
-/* flyingV 文案系統 - 全域樣式 */
+/* 嘖嘖線上文案系統 - 全域樣式 */
 
 :root {
-  --primary: #c24631;
-  --primary-hover: #a23826;
-  --primary-light: #f7e7e3;
-  --secondary: #33C5D6;
-  --success: #2BB6A3;
+  --primary: #3f3f3f;
+  --primary-hover: #2a2a2a;
+  --primary-light: #e8e8e8;
+  --secondary: #3366a9;
+  --success: #069668;
   --danger: #ef4444;
-  --sidebar-bg: #2B2B2B;
+  --sidebar-bg: #2B2B2B; /* 刻意跟 --primary 拉開色階，讓 .sidebar nav a.active 在深色側欄上仍看得見 */
   --gray-50: #f9fafb;
   --gray-100: #f3f4f6;
   --gray-200: #e5e7eb;
@@ -218,7 +218,7 @@ body {
 .form-group select:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(194,70,49,0.12);
+  box-shadow: 0 0 0 3px rgba(63,63,63,0.12);
 }
 
 .form-group textarea { resize: vertical; min-height: 80px; }
@@ -297,7 +297,7 @@ table tr:hover { background: var(--gray-50); }
 
 .output-area.streaming {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(194,70,49,0.12);
+  box-shadow: 0 0 0 2px rgba(63,63,63,0.12);
 }
 
 .cursor-blink::after {
@@ -324,7 +324,7 @@ table tr:hover { background: var(--gray-50); }
 .message-user {
   background: var(--primary-light);
   align-self: flex-end;
-  border: 1px solid #e3b6ae;
+  border: 1px solid #c7c7c7;
 }
 
 .message-ai {

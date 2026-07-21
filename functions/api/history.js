@@ -1,10 +1,10 @@
 /**
  * /api/history — Generation history
- * 分流：一般使用者只看自己的紀錄（依 generated_by），管理員（flyingfive）看全部。
+ * 分流：一般使用者只看自己的紀錄（依 generated_by），管理員（jerry）看全部。
  */
 import { listGenerations, listGenerationUsers } from '../_shared/sheets.js';
 
-const ADMIN_EMAILS = ['flyingfive@ontoo.cc'];
+const ADMIN_EMAILS = ['jerry@zeczec.com'];
 
 export async function onRequestGet({ request, env }) {
   try {

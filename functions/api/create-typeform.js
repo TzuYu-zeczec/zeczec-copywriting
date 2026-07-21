@@ -54,7 +54,7 @@ async function parseQuestionnaireToJSON(env, content, productName) {
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-5',
       max_tokens: 8192,
       system: `你是一個問卷結構解析器，專門把募資前測問卷文案轉換為 Typeform API 的 JSON 格式。
 只回傳 JSON，不要有任何其他文字或 markdown 標記。

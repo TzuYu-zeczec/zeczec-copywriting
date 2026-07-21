@@ -5,13 +5,15 @@
  * 產出次數，並用 Anthropic Sonnet 計價換算預估花費（USD → TWD）。
  *
  * 權限：只有 cf-access-authenticated-user-email 屬於 ADMIN_EMAILS 才能讀。
- * （需先在 Cloudflare Access 套上 @ontoo.cc 登入牆，header 才會帶 email。）
+ * （需先在 Cloudflare Access 套上 @zeczec.com 登入牆，header 才會帶 email。）
  */
 import { listGenerations } from '../_shared/sheets.js';
 
-const ADMIN_EMAILS = ['flyingfive@ontoo.cc'];
+const ADMIN_EMAILS = ['jerry@zeczec.com'];
 
-// Anthropic Claude Sonnet 計價（每百萬 tokens，美金）
+// Anthropic claude-sonnet-5 標準計價（每百萬 tokens，美金）
+// 官方另有促銷價至 2026-08-31（input $2／output $10），此處故意用標準價當常數，
+// 促銷期間實際帳單會比這裡估的低；促銷結束後數字才不會過期。
 const PRICE_INPUT_PER_M = 3;
 const PRICE_OUTPUT_PER_M = 15;
 const USD_TO_TWD = 32; // 近似匯率

@@ -176,7 +176,7 @@ export async function onRequestPost({ request, env }) {
     content.push({ type: 'text', text: buildMergeInstruction(existing || {}) });
 
     const res = await anthropicWithRetry({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-5',
       max_tokens: 8192,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content }]

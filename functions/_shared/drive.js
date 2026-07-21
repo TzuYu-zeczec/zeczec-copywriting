@@ -1,14 +1,24 @@
 /**
  * Google Drive 操作模組
  * 讀取 skills/ 和 memory/，以及建立 Google Docs 文件
+ *
+ * 所有內容都放在共用雲端硬碟（Shared Drive）裡，SA 是直接成員（不冒充任何人）。
+ * Shared Drive 的檔案在 Drive API 預設查詢範圍之外，因此每個請求都要帶
+ * supportsAllDrives=true；files.list 額外要帶 includeItemsFromAllDrives=true。
  */
 import { getAccessToken } from './google-auth.js';
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 
+// 幫路徑補上 supportsAllDrives=true（path 可能已有其他 query string）
+function withSharedDriveSupport(path) {
+  const sep = path.includes('?') ? '&' : '?';
+  return `${path}${sep}supportsAllDrives=true`;
+}
+
 async function driveRequest(env, path, options = {}) {
   const token = await getAccessToken(env);
-  const res = await fetch(`${DRIVE_API}${path}`, {
+  const res = await fetch(`${DRIVE_API}${withSharedDriveSupport(path)}`, {
     ...options,
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -26,7 +36,7 @@ async function driveRequest(env, path, options = {}) {
 async function listFilesInFolder(env, folderId) {
   const query = `'${folderId}' in parents and trashed=false`;
   const res = await driveRequest(env,
-    `/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size,modifiedTime)&orderBy=name`
+    `/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size,modifiedTime)&orderBy=name&includeItemsFromAllDrives=true&corpora=allDrives`
   );
   const data = await res.json();
   return data.files || [];
@@ -242,7 +252,7 @@ export async function createGoogleDoc(env, title, content, folderId) {
     `--${boundary}--`;
 
   const res = await fetch(
-    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink&supportsAllDrives=true',
     {
       method: 'POST',
       headers: {
@@ -286,7 +296,7 @@ export async function uploadRawFile(env, name, content, mimeType, folderId) {
     `--${boundary}--`;
 
   const res = await fetch(
-    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink&supportsAllDrives=true',
     {
       method: 'POST',
       headers: {

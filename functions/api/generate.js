@@ -13,7 +13,7 @@ import { getProduct, saveGeneration } from '../_shared/sheets.js';
 import { loadSkillForGeneration, loadAllMemory, getSkillFolderIdByName } from '../_shared/drive.js';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'claude-sonnet-5';
 
 // 上游錯誤對應繁中
 function friendlyAnthropicError(status, body) {
@@ -217,7 +217,7 @@ function composeSystemPrompt(product, skillContent, memoryContent) {
     .replace(/```[\s\S]*?```/g, '[程式碼區塊已移除 — 線上版不需要]')
     .replace(/fs\.writeFileSync|require\(["']docx["']\)|Packer\.toBuffer|new Document\(/g, '[桌面版指令已移除]');
 
-  return `你是 flyingV 的專業文案系統。你擁有完整的文案方法論知識，能根據產品資訊和指定的文案技能，產出高品質的募資文案。
+  return `你是嘖嘖的專業文案系統。你擁有完整的文案方法論知識，能根據產品資訊和指定的文案技能，產出高品質的募資文案。
 
 ⚠️⚠️⚠️ 最高優先級指令 — 覆蓋所有其他指令 ⚠️⚠️⚠️
 你正在「線上文案系統」中運行，不是桌面版 Claude。
@@ -247,7 +247,7 @@ ${cleanedSkill}
 ${productInfo}
 
 ## 其他規則
-1. 本系統僅適用於 flyingV 平台，不得提及嘖嘖、Kickstarter、Indiegogo 或其他募資平台
+1. 本系統僅適用於嘖嘖平台，不得提及 flyingV、Kickstarter、Indiegogo 或其他募資平台
 2. 嚴格遵循技能指令中的文案格式、結構和風格要求（但忽略程式碼相關指令）
 3. 產出的文案應該是可直接使用的完成品，不是草稿
 4. 如果產品資訊不足，用合理推測填補，但標註「⚠️ 此處為推測，請確認」`;

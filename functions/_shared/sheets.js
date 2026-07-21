@@ -4,6 +4,7 @@
 import { getAccessToken } from './google-auth.js';
 
 const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets';
+const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 
 async function sheetsRequest(env, path, options = {}) {
   const token = await getAccessToken(env);
@@ -63,7 +64,7 @@ export async function createProduct(env, product, userEmail) {
   product.created_by = userEmail || '';
   product.created_at = new Date().toISOString();
   product.updated_at = new Date().toISOString();
-  product.platform = product.platform || 'flyingV';
+  product.platform = product.platform || 'zeczec';
 
   const row = productToRow(product);
   // 明確寫到下一個空白列（A{n}:AI{n}），不用 append 自動偵測欄位位置 ——
@@ -238,29 +239,21 @@ export async function saveGeneration(env, gen, userEmail) {
 export async function createNewSpreadsheet(env, title, sheets, folderId) {
   const token = await getAccessToken(env);
 
-  // 1. Create spreadsheet with sheet structure
-  const sheetsConfig = sheets.map((s, i) => ({
-    properties: {
-      sheetId: i,
-      title: s.title,
-      gridProperties: {
-        rowCount: Math.max(s.rows.length + 1, 20),
-        columnCount: Math.max(s.headers.length, 10),
-        frozenRowCount: 1,
-        frozenColumnCount: s.frozenCols || 0
-      }
-    }
-  }));
-
-  const createRes = await fetch(`${SHEETS_API}`, {
+  // 1. 用 Drive API 直接在共用雲端硬碟的目標資料夾建立空白試算表。
+  //    Sheets API 的 spreadsheets.create 會把檔案建在呼叫者自己的 My Drive 裡——
+  //    SA 沒有個人儲存空間，會回「Service Accounts do not have storage quota」失敗。
+  //    改用 Drive API files.create 帶 parents + supportsAllDrives，直接落地在共用雲端硬碟，
+  //    也就不需要原本「建立後再搬到資料夾」那一步。
+  const createRes = await fetch(`${DRIVE_API}/files?supportsAllDrives=true&fields=id`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      properties: { title },
-      sheets: sheetsConfig
+      name: title,
+      mimeType: 'application/vnd.google-apps.spreadsheet',
+      parents: folderId ? [folderId] : undefined
     })
   });
 
@@ -269,10 +262,46 @@ export async function createNewSpreadsheet(env, title, sheets, folderId) {
     throw new Error(`建立試算表失敗: ${createRes.status} ${err}`);
   }
 
-  const spreadsheet = await createRes.json();
-  const spreadsheetId = spreadsheet.spreadsheetId;
+  const created = await createRes.json();
+  const spreadsheetId = created.id;
 
-  // 2. Write data to each sheet
+  // 2. 用 Sheets API 設定分頁結構：新建的試算表只有一個預設分頁(sheetId 固定為 0)，
+  //    第一個分頁用 updateSheetProperties 改名+套屬性，其餘分頁用 addSheet 新增。
+  const structureRequests = sheets.map((s, i) => {
+    const properties = {
+      title: s.title,
+      gridProperties: {
+        rowCount: Math.max(s.rows.length + 1, 20),
+        columnCount: Math.max(s.headers.length, 10),
+        frozenRowCount: 1,
+        frozenColumnCount: s.frozenCols || 0
+      }
+    };
+    if (i === 0) {
+      return { updateSheetProperties: { properties: { sheetId: 0, ...properties }, fields: 'title,gridProperties' } };
+    }
+    return { addSheet: { properties } };
+  });
+
+  const structRes = await fetch(`${SHEETS_API}/${spreadsheetId}:batchUpdate`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ requests: structureRequests })
+  });
+
+  if (!structRes.ok) {
+    const err = await structRes.text();
+    throw new Error(`設定試算表分頁結構失敗: ${structRes.status} ${err}`);
+  }
+
+  const structData = await structRes.json();
+  // 分頁對照的實際 sheetId：第一頁固定 0，其餘取 addSheet 回應建立時分配到的 sheetId
+  const sheetIds = [0, ...(structData.replies || []).slice(1).map(r => r.addSheet.properties.sheetId)];
+
+  // 3. Write data to each sheet
   const valueRanges = sheets.map(s => ({
     range: `'${s.title}'!A1`,
     values: [s.headers, ...s.rows]
@@ -290,13 +319,14 @@ export async function createNewSpreadsheet(env, title, sheets, folderId) {
     })
   });
 
-  // 3. Apply formatting (header row styling)
+  // 4. Apply formatting (header row styling) — 用真正的 sheetId(sheetIds[i])，不是迴圈索引
   const formatRequests = [];
   sheets.forEach((s, sheetIndex) => {
+    const sheetId = sheetIds[sheetIndex];
     // Header row: bold, colored background
     formatRequests.push({
       repeatCell: {
-        range: { sheetId: sheetIndex, startRowIndex: 0, endRowIndex: 1 },
+        range: { sheetId, startRowIndex: 0, endRowIndex: 1 },
         cell: {
           userEnteredFormat: {
             backgroundColor: { red: 0.2, green: 0.46, blue: 0.73 },
@@ -312,14 +342,14 @@ export async function createNewSpreadsheet(env, title, sheets, folderId) {
     // Auto-resize columns
     formatRequests.push({
       autoResizeDimensions: {
-        dimensions: { sheetId: sheetIndex, dimension: 'COLUMNS', startIndex: 0, endIndex: s.headers.length }
+        dimensions: { sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: s.headers.length }
       }
     });
 
     // Set row heights for data rows (wrap text)
     formatRequests.push({
       repeatCell: {
-        range: { sheetId: sheetIndex, startRowIndex: 1, endRowIndex: s.rows.length + 1 },
+        range: { sheetId, startRowIndex: 1, endRowIndex: s.rows.length + 1 },
         cell: {
           userEnteredFormat: {
             wrapStrategy: 'WRAP',
@@ -336,7 +366,7 @@ export async function createNewSpreadsheet(env, title, sheets, folderId) {
     if (s.labelCols) {
       formatRequests.push({
         repeatCell: {
-          range: { sheetId: sheetIndex, startRowIndex: 1, endRowIndex: s.rows.length + 1, startColumnIndex: 0, endColumnIndex: s.labelCols },
+          range: { sheetId, startRowIndex: 1, endRowIndex: s.rows.length + 1, startColumnIndex: 0, endColumnIndex: s.labelCols },
           cell: {
             userEnteredFormat: {
               backgroundColor: { red: 0.94, green: 0.94, blue: 0.94 },
@@ -355,7 +385,7 @@ export async function createNewSpreadsheet(env, title, sheets, folderId) {
       for (const sec of s.sections) {
         formatRequests.push({
           repeatCell: {
-            range: { sheetId: sheetIndex, startRowIndex: sec.rowIndex, endRowIndex: sec.rowIndex + 1, startColumnIndex: 0, endColumnIndex: colCount },
+            range: { sheetId, startRowIndex: sec.rowIndex, endRowIndex: sec.rowIndex + 1, startColumnIndex: 0, endColumnIndex: colCount },
             cell: {
               userEnteredFormat: {
                 backgroundColor: sec.color || { red: 0.2, green: 0.2, blue: 0.2 },
@@ -372,7 +402,7 @@ export async function createNewSpreadsheet(env, title, sheets, folderId) {
       formatRequests.push({
         addBanding: {
           bandedRange: {
-            range: { sheetId: sheetIndex, startRowIndex: 0, endRowIndex: s.rows.length + 1, startColumnIndex: 0, endColumnIndex: colCount },
+            range: { sheetId, startRowIndex: 0, endRowIndex: s.rows.length + 1, startColumnIndex: 0, endColumnIndex: colCount },
             rowProperties: {
               headerColor: { red: 0.2, green: 0.46, blue: 0.73 },
               firstBandColor: { red: 1, green: 1, blue: 1 },
@@ -399,22 +429,7 @@ export async function createNewSpreadsheet(env, title, sheets, folderId) {
     }
   }
 
-  // 4. Move to target folder (using Drive API)
-  if (folderId) {
-    const DRIVE_API = 'https://www.googleapis.com/drive/v3';
-    // Get current parent
-    const fileRes = await fetch(`${DRIVE_API}/files/${spreadsheetId}?fields=parents`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const fileData = await fileRes.json();
-    const prevParent = (fileData.parents || [])[0] || '';
-
-    // Move to target folder
-    await fetch(`${DRIVE_API}/files/${spreadsheetId}?addParents=${folderId}&removeParents=${prevParent}`, {
-      method: 'PATCH',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-  }
+  // 檔案在步驟 1 已經直接建立在共用雲端硬碟的目標資料夾，不需要再搬移
 
   return {
     spreadsheetId,

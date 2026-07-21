@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>問卷系統 — flyingV 文案系統</title>
+  <title>問卷系統 — 嘖嘖線上文案系統</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -27,7 +27,7 @@
           <label>問卷平台</label>
           <div class="flex gap-4">
             <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;">
-              <input type="radio" name="platform" value="typeform" checked style="width:auto;"> Typeform（逐張圖卡沉浸式，可一鍵自動建立）
+              <input type="radio" name="platform" value="typeform" checked style="width:auto;"> Typeform（逐張圖卡沉浸式）
             </label>
             <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;">
               <input type="radio" name="platform" value="surveycake" style="width:auto;"> SurveyCake（長頁滾動互動式 HTML）
@@ -65,8 +65,9 @@
         <div id="html-result" class="text-sm mt-2"></div>
       </div>
 
-      <!-- 階段三：自動建立 Typeform -->
-      <div class="card" id="typeform-card">
+      <!-- 階段三：自動建立 Typeform — 暫緩(TYPEFORM_API_TOKEN 未設定)，卡片先隱藏。
+           之後要啟用：把 wrangler.toml/Cloudflare Secret 補上 token，把下面 class 的 hidden 拿掉即可。 -->
+      <div class="card hidden" id="typeform-card">
         <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
           <h3 style="margin:0;">③ 自動完成初版 Typeform</h3>
           <button class="btn btn-success" id="btn-create-tf" onclick="createTypeformForm()" disabled>自動建立 Typeform 問卷</button>
@@ -113,8 +114,10 @@
       }
     }
 
+    // Typeform 自動建立暫緩（TYPEFORM_API_TOKEN 未設定），卡片固定隱藏，不受平台切換影響。
+    // 之後要啟用：補上 token 後把這裡改回 classList.toggle('hidden', getPlatform() !== 'typeform')。
     function updateTypeformCardVisibility() {
-      document.getElementById('typeform-card').classList.toggle('hidden', getPlatform() !== 'typeform');
+      document.getElementById('typeform-card').classList.add('hidden');
     }
 
     function validateSelection() {

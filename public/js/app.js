@@ -1,5 +1,5 @@
 /**
- * flyingV 文案系統 - 共用 JS 模組
+ * 嘖嘖線上文案系統 - 共用 JS 模組
  */
 
 const API = {
@@ -416,7 +416,7 @@ const NAV_ITEMS = [
 ];
 
 // 管理員 email（只有這些帳號看得到「管理」標籤、能讀使用量）
-const ADMIN_EMAILS = ['flyingfive@ontoo.cc'];
+const ADMIN_EMAILS = ['jerry@zeczec.com'];
 
 // 正規化路徑做 active 比對：去掉 .html、把 '/' 與 '' 視為 index（Cloudflare Pages 用無副檔名乾淨網址）
 function normalizePath(p) {
@@ -434,7 +434,7 @@ async function renderSidebar() {
   const items = NAV_ITEMS.filter(item => !item.adminOnly || isAdmin);
   el.innerHTML = `
     <div class="sidebar-logo">
-      <h1>flyingV 文案系統</h1>
+      <h1>嘖嘖線上文案系統</h1>
       <span>Copywriting System</span>
     </div>
     <nav>
@@ -444,7 +444,7 @@ async function renderSidebar() {
           ${item.label}
         </a>
       `).join('')}
-      <a href="https://drive.google.com/drive/u/6/folders/1QhshxzNL7Z9bcsGtLWhz3oxHGfb2OUEI" target="_blank" rel="noopener">
+      <a href="https://drive.google.com/drive/folders/13T6Fpdd4Z66Vz3RrRKybzbUGQB36ZcCM" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
         文案生成資料夾
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;margin-left:auto;opacity:0.55;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>

@@ -72,7 +72,7 @@ async function parseContentToJSON(env, content) {
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-5',
       max_tokens: 32000,
       stream: true,
       system: `你是「Meta 廣告受眾矩陣建構器」。把受眾分析內容轉換成一份完整、可直接投放的受眾矩陣 JSON。

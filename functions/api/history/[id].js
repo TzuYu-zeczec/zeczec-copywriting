@@ -1,6 +1,6 @@
 import { getGeneration } from '../../_shared/sheets.js';
 
-const ADMIN_EMAILS = ['flyingfive@ontoo.cc'];
+const ADMIN_EMAILS = ['jerry@zeczec.com'];
 
 export async function onRequestGet({ request, params, env }) {
   try {

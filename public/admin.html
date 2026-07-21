@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>管理 — flyingV 文案系統</title>
+  <title>管理 — 嘖嘖線上文案系統</title>
   <link rel="stylesheet" href="/css/style.css">
   <style>
     .skill-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
@@ -94,7 +94,7 @@
   <script src="/js/app.js"></script>
   <script>
     async function init() {
-      // 管理員守門：非管理員直接擋下（Cloudflare Access 已限 @ontoo.cc，此處再限管理員 email）
+      // 管理員守門：非管理員直接擋下（Cloudflare Access 已限 @zeczec.com，此處再限管理員 email）
       const email = await getCurrentUserEmail();
       if (!ADMIN_EMAILS.includes(email)) {
         document.getElementById('admin-main').innerHTML = `

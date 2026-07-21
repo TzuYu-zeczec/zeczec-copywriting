@@ -20,9 +20,9 @@ Jerry（原開發者，jerry@ontoo.cc → jerry@zeczec.com）從 flyingV 換到�
 - [x] 1. 前置檢查與雲端容器：確認 jerry@zeczec.com 能自建共用雲端硬碟 → 建「嘖嘖線上文案系統」共用雲端硬碟＋skills／memory／線上文案生成區三資料夾＋資料庫 Sheet（Products A:AI 35 欄、Generations A:M 13 欄，欄位照交接手冊 5.1，第 1 列標題）【需使用者操作 Drive；若不能建共用雲端硬碟 → escape hatch 停下回報】
 - [x] 2. GCP：建專案＋啟用 Drive/Sheets API＋建 Service Account＋下載 JSON key＋把 SA email 加為共用雲端硬碟「內容管理員」成員【需使用者操作 GCP Console，我出逐步指引】
 - [ ] 3. 專案骨架：複製交接包 `01_系統程式碼/` → `~/zeczec-copywriting`（排除交接工作日誌）、改 `wrangler.toml`（專案名 zeczec-copywriting、新 Sheet/資料夾 ID、刪 `GOOGLE_DRIVE_OWNER_EMAIL`）、`git init`＋首 commit＋推 GitHub 私有庫
-- [ ] 4. Google 認證改造：`google-auth.js` 移除 impersonation、`drive.js` 全請求加 supportsAllDrives、`sheets.js` 的 `createNewSpreadsheet` 改 Drive API 建表；`node --check` 全過
-- [ ] 5. 平台與品牌反轉：system prompt 禁令、platform 預設、CSS 三色、系統名、ADMIN_EMAILS 四檔、資料夾連結兩處、survey.html 隱藏 Typeform 按鈕
-- [ ] 6. 模型升級：5 檔 MODEL 常數 → `claude-sonnet-5`；usage.js 計價常數與匯率核實更新
+- [x] 4. Google 認證改造：`google-auth.js` 移除 impersonation、`drive.js` 全請求加 supportsAllDrives、`sheets.js` 的 `createNewSpreadsheet` 改 Drive API 建表；`node --check` 全過
+- [x] 5. 平台與品牌反轉：system prompt 禁令、platform 預設、CSS 三色、系統名、ADMIN_EMAILS 四檔、資料夾連結兩處、survey.html 隱藏 Typeform 按鈕
+- [x] 6. 模型升級：5 檔 MODEL 常數 → `claude-sonnet-5`；usage.js 計價常數與匯率核實更新
 - [ ] 7. Skills×12＋Memory×8 機械反轉（flyingV→嘖嘖、feedback_flyingv_only 反轉），產出 `嘖嘖規格缺口清單.md`；反轉版存 repo `content/` 留檔＋上傳共用雲端硬碟對應資料夾（資料夾名稱保留原 skill 名）【上傳需使用者拖檔或授權】
 - [ ] 8. 首次部署：`npx wrangler pages deploy ./public --project-name zeczec-copywriting --branch production`＋Dashboard 設 Secrets（`ANTHROPIC_API_KEY`【外部依賴：找公司要】、`GOOGLE_SERVICE_ACCOUNT_JSON`）
 - [ ] 9. Cloudflare Access：GCP 建 OAuth 用戶端（redirect URI 填 team domain callback）→ Zero Trust 加 Google IdP → Add Application（⚠ Subdomain 留空、Domain 選 zeczec-copywriting.pages.dev、Path 留空）→ Policy：Emails ending in @zeczec.com【需使用者操作 Dashboard】

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>產品列表 — flyingV 文案系統</title>
+  <title>產品列表 — 嘖嘖線上文案系統</title>
   <link rel="stylesheet" href="/css/style.css">
   <style>
     .file-drop-zone {
@@ -129,10 +129,10 @@
       }
     }
 
-    // 新增者：取 email 在 @ 前的前綴；舊資料沒記錄的一律顯示 flyingfive
+    // 新增者：取 email 在 @ 前的前綴；舊資料沒記錄的一律顯示 jerry
     function creatorName(p) {
       const e = (p.created_by || '').trim();
-      return e ? e.split('@')[0] : 'flyingfive';
+      return e ? e.split('@')[0] : 'jerry';
     }
 
     function renderProducts() {

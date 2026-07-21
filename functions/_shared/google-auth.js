@@ -1,6 +1,9 @@
 /**
  * Google Service Account 認證模組
  * 在 Cloudflare Workers 環境中使用 JWT 取得 access token
+ *
+ * 認證模式：SA 是共用雲端硬碟的直接成員（內容管理員），不冒充任何真人帳號。
+ * 檔案歸共用雲端硬碟（組織）所有，不佔任何人的個人 Drive 配額。
  */
 
 // Base64URL decode
@@ -31,7 +34,7 @@ async function importPrivateKey(pem) {
 }
 
 // Create signed JWT
-async function createJWT(serviceAccount, scopes, impersonateEmail) {
+async function createJWT(serviceAccount, scopes) {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: 'RS256', typ: 'JWT' };
   const payload = {
@@ -41,11 +44,6 @@ async function createJWT(serviceAccount, scopes, impersonateEmail) {
     iat: now,
     exp: now + 3600 // 1 hour
   };
-
-  // Domain-wide delegation: impersonate user so files are owned by them
-  if (impersonateEmail) {
-    payload.sub = impersonateEmail;
-  }
 
   const encoder = new TextEncoder();
   const headerB64 = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
@@ -75,11 +73,10 @@ export async function getAccessToken(env) {
   }
 
   const serviceAccount = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON);
-  const impersonateEmail = env.GOOGLE_DRIVE_OWNER_EMAIL || '';
   const jwt = await createJWT(serviceAccount, [
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/drive'
-  ], impersonateEmail);
+  ]);
 
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',

@@ -12,7 +12,7 @@ import { getProduct } from '../_shared/sheets.js';
 import { loadSkillForGeneration, loadAllMemory, getSkillFolderIdByName } from '../_shared/drive.js';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'claude-sonnet-5';
 
 export async function onRequestPost({ request, env }) {
   try {
@@ -128,7 +128,7 @@ function composeCopyPrompt(product, skillContent, memoryContent, platform) {
     ? '只走【Part B：Typeform 路徑】，依 B-Step 1~4 產出。問卷由圖片卡片（statement）與問題題組交錯，每張圖之間要有「帶懸念問句」的銜接按鈕文字。'
     : '只走【Part A：SurveyCake 路徑】，依 A-Step 1~4 產出。長頁滾動式，星級題打主力賣點、多選題補次要特色。';
 
-  return `你是 flyingV 的專業募資問卷文案系統。根據產品資訊與「募資前測問卷」技能，產出完整、可直接使用的問卷文案。
+  return `你是嘖嘖的專業募資問卷文案系統。根據產品資訊與「募資前測問卷」技能，產出完整、可直接使用的問卷文案。
 
 ⚠️⚠️⚠️ 最高優先級指令 ⚠️⚠️⚠️
 本階段只負責「撰寫問卷文案」，輸出純文字 Markdown。
@@ -151,7 +151,7 @@ ${cleanedSkill}
 ${formatProductInfo(product)}
 
 ## 其他規則
-1. 本系統僅適用於 flyingV，提及募資平台一律寫「flyingV」，不得出現嘖嘖、Kickstarter、Indiegogo。
+1. 本系統僅適用於嘖嘖，提及募資平台一律寫「嘖嘖」，不得出現 flyingV、Kickstarter、Indiegogo。
 2. 嚴格遵循技能的問卷結構、題型與順序。
 3. 總題數控制在技能規範內，文末附「圖片製作清單」表格。
 4. 產品資訊不足時用合理推測補足，並標註「⚠️ 此處為推測，請確認」。`;
@@ -164,7 +164,7 @@ function composeHtmlPrompt(product, skillContent, platform) {
     ? `走【Part B：Typeform 路徑】的 B-Step 5。產出所有 1080×1520 直式圖片卡片的設計稿，每張圖含：圖片編號（IMG-01…）、尺寸標記、上方情境畫面區、撕裂紙紋過渡、主標題、特色列點區。全套圖片風格統一、套用產品品牌色。`
     : `走【Part A：SurveyCake 路徑】的 A-Step 5。產出「全螢幕逐題滑動」的互動式 HTML 問卷：固定頂部進度條、右側導航圓點、淡入淡出切換、鍵盤與觸控操作；六種 slide 元件（Opening／星級題／多選題／購買意願／輸入題／感謝頁）。用 CSS Variables 管理 --brand / --brand-dark / --brand-light。`;
 
-  return `你是 flyingV 的問卷配圖設計稿產生器。根據產品資訊與「募資前測問卷」技能，產出可直接在瀏覽器開啟、截圖或交給設計師的 HTML 設計稿。
+  return `你是嘖嘖的問卷配圖設計稿產生器。根據產品資訊與「募資前測問卷」技能，產出可直接在瀏覽器開啟、截圖或交給設計師的 HTML 設計稿。
 
 ⚠️ 輸出規定（務必遵守）：
 - 直接輸出**完整的 HTML 檔案**，從 <!DOCTYPE html> 開始、到 </html> 結束。
@@ -181,7 +181,7 @@ ${skillContent}
 ${formatProductInfo(product)}
 
 ## 其他規則
-1. 本系統僅適用於 flyingV，文字中提及平台一律寫「flyingV」。
+1. 本系統僅適用於嘖嘖，文字中提及平台一律寫「嘖嘖」。
 2. 品牌色請依產品類別與調性自行設定一組協調的色票（--brand / --brand-dark / --brand-light）。
 3. 文字內容要與問卷文案一致、可直接使用。`;
 }
