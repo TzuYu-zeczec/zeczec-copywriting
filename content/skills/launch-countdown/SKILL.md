@@ -10,7 +10,7 @@ description: |
   - 使用者提到「嘖嘖」並要求產出開賣前的宣傳內容
   - 任何涉及「募資專案開賣前的系列宣傳文案」的請求
 
-  ⚠️ 平台限定：本 skill 僅適用於嘖嘖平台，不涉及 flyingV、Kickstarter、Indiegogo 或其他募資平台。
+  ⚠️ 平台限定：本 skill 僅適用於嘖嘖平台，不涉及其他任何募資平台。
 
   不應觸發的情境：
   - 只是寫一篇單獨的社群貼文（用 crowdfunding-post skill）

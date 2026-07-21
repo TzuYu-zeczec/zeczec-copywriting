@@ -12,7 +12,7 @@ description: |
   - 使用者要求撰寫嘖嘖的社群推廣貼文
   - 任何涉及「募資產品的 FB／IG 貼文撰寫」的請求
 
-  ⚠️ 平台限定：本 skill 僅適用於嘖嘖平台，不涉及 flyingV、Kickstarter、Indiegogo 或其他募資平台。
+  ⚠️ 平台限定：本 skill 僅適用於嘖嘖平台，不涉及其他任何募資平台。
 
   不應觸發的情境：
   - 撰寫募資頁面文案（用 page-copy-framework skill）
