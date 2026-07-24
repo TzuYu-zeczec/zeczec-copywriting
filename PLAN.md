@@ -23,7 +23,7 @@ Jerry（原開發者，jerry@ontoo.cc → jerry@zeczec.com）從原系統換到�
 - [x] 4. Google 認證改造：`google-auth.js` 移除 impersonation、`drive.js` 全請求加 supportsAllDrives、`sheets.js` 的 `createNewSpreadsheet` 改 Drive API 建表；`node --check` 全過
 - [x] 5. 平台與品牌反轉：system prompt 禁令、platform 預設、CSS 三色、系統名、ADMIN_EMAILS 四檔、資料夾連結兩處、survey.html 隱藏 Typeform 按鈕
 - [x] 6. 模型升級：5 檔 MODEL 常數 → `claude-sonnet-5`；usage.js 計價常數與匯率核實更新
-- [ ] 7. Skills×12＋Memory×8 機械反轉（原系統→嘖嘖、平台限定記憶檔反轉並改名），產出 `嘖嘖規格缺口清單.md`；反轉版存 repo `content/` 留檔＋上傳共用雲端硬碟對應資料夾（資料夾名稱保留原 skill 名）【上傳需使用者拖檔或授權】
+- [x] 7. Skills×12＋Memory×8 機械反轉（原系統→嘖嘖、平台限定記憶檔反轉並改名），產出 `嘖嘖規格缺口清單.md`；反轉版存 repo `content/` 留檔＋上傳共用雲端硬碟對應資料夾（資料夾名稱保留原 skill 名；使用者決定不上傳 competitor-analysis／consolidate-memory 兩份，實際上傳 10 skills＋8 memory）【上傳需使用者拖檔或授權】
 - [ ] 8. 首次部署：`npx wrangler pages deploy ./public --project-name zeczec-copywriting --branch production`＋Dashboard 設 Secrets（`ANTHROPIC_API_KEY`【外部依賴：找公司要】、`GOOGLE_SERVICE_ACCOUNT_JSON`）
 - [ ] 9. Cloudflare Access：GCP 建 OAuth 用戶端（redirect URI 填 team domain callback）→ Zero Trust 加 Google IdP → Add Application（⚠ Subdomain 留空、Domain 選 zeczec-copywriting.pages.dev、Path 留空）→ Policy：Emails ending in @zeczec.com【需使用者操作 Dashboard】
 - [ ] 10. 端到端驗證（見驗收條件）＋把「嘖嘖規格缺口清單」交給使用者收尾
@@ -32,7 +32,7 @@ Jerry（原開發者，jerry@ontoo.cc → jerry@zeczec.com）從原系統換到�
 - 情境（task 1）：Drive 裡看得到共用雲端硬碟與三資料夾；Sheet 兩分頁標題列與交接手冊 5.1/5.2 欄位一致
 - 情境（task 4）：部署後呼叫 `/api/save-to-drive` 存一份測試 Doc，檔案出現在共用雲端硬碟的輸出資料夾（而非任何人的個人 Drive）；`/api/products` 能讀寫資料庫 Sheet
 - 情境（task 5）：全站主視覺為 #3f3f3f/#069668 色系、側欄顯示「嘖嘖線上文案系統」；產出頁 system prompt 產出的文案不出現原系統平台字眼；問卷頁看不到 Typeform 自動建立按鈕
-- 情境（task 7）：共用雲端硬碟 skills 資料夾有 12 個子資料夾（名稱與原 skill 相同）、memory 有 8 份 .md；抽查任一 SKILL.md 無原系統平台字眼；缺口清單列出所有待補的嘖嘖特定規格
+- 情境（task 7）：共用雲端硬碟 skills 資料夾有 10 個子資料夾（刻意不建 competitor-analysis／consolidate-memory，前者無專屬頁面、後者與文案系統無關）、memory 有 8 份 .md；抽查任一 SKILL.md 無原系統平台字眼；缺口清單列出所有待補的嘖嘖特定規格
 - 情境（task 9）：無痕視窗開站先跳 Google 登入；@zeczec.com 可進、其他網域被拒；登入後產出紀錄的 generated_by 有值
 - 情境（task 10，端到端）：①新增產品（手動＋檔案匯入各一）②產品定位策略頁串流產出並存 Doc ③受眾矩陣建出 2 分頁彩色 Sheets（約 3 分鐘屬正常）④問卷系統 copy/html 兩階段跑通 ⑤產出紀錄分流（一般帳號只見自己）⑥管理頁顯示用量與新計價
 
