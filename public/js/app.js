@@ -2,6 +2,10 @@
  * 嘖嘖線上文案系統 - 共用 JS 模組
  */
 
+// 嘖嘖官方 logomark（來源：assets.zeczec.com/static/logomark.svg，自架於 /favicon.svg）
+// fill="currentColor" 繼承外層 .sidebar__logo / .topbar__logo 的白字色，套在品牌綠底上
+const LOGOMARK_SVG = '<svg viewBox="0 0 138.03 138.03" width="60%" height="60%" fill="currentColor"><path d="M69 0a69 69 0 1 0 69 69A69 69 0 0 0 69 0zm38.7 75.53l-1.55 7.18c-.23 1.18-.81 1.54-1.82 1.49l-40.48-1.9a1.72 1.72 0 0 1-1.43-2.2l2.3-11.94a2.05 2.05 0 0 0-1.87-2.23l-31-2.09c-1 0-1.57-.66-1.57-1.82l1.16-6.81c.22-1.15.8-1.43 1.84-1.37l41.94 2.32a1.94 1.94 0 0 1 1.72 2.13l-2.19 12.13a1.88 1.88 0 0 0 1.87 2.1l30.06 1.39c.93 0 1.24.53 1.03 1.62z"/></svg>';
+
 const API = {
   // === Products ===
   async listProducts() {
@@ -431,7 +435,7 @@ async function renderSidebar() {
 
   el.innerHTML = `
     <div class="sidebar__brand">
-      <div class="sidebar__logo">嘖</div>
+      <div class="sidebar__logo">${LOGOMARK_SVG}</div>
       <div>
         <div class="sidebar__brand-name">線上文案系統</div>
         <div class="sidebar__brand-sub">COPYWRITING</div>
@@ -457,7 +461,7 @@ function renderTopbar() {
   bar.className = 'topbar';
   bar.innerHTML = `
     <div class="topbar__brand">
-      <div class="topbar__logo">嘖</div>
+      <div class="topbar__logo">${LOGOMARK_SVG}</div>
       <span class="topbar__title">${UI.escapeHtml(title)}</span>
     </div>
     <button class="topbar__menu" aria-label="選單" onclick="toggleMobileNav()">☰</button>`;
