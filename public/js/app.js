@@ -387,18 +387,18 @@ const SKILL_NAMES = {
   'page-copy-framework': '頁面文案框架'
 };
 
-// === Sidebar (single source of truth) ===
+// === Sidebar (single source of truth)：group 用來畫 nav-group-label 分組線 ===
 const NAV_ITEMS = [
-  { href: '/index.html', label: '產品列表', icon: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>' },
-  { href: '/positioning.html', label: '產品定位策略', icon: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>' },
-  { href: '/media.html', label: '媒體指引', icon: '<path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>' },
-  { href: '/survey.html', label: '問卷系統', icon: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>' },
-  { href: '/launch.html', label: '開賣倒數', icon: '<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 18l-1.5-1.5"/>' },
-  { href: '/batch.html', label: '大量社群貼文', icon: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>' },
-  { href: '/closing.html', label: '結案倒數', icon: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>' },
-  { href: '/page.html', label: '募資頁面', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/>' },
-  { href: '/history.html', label: '產出紀錄', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' },
-  { href: '/admin.html', label: '管理', adminOnly: true, icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>' }
+  { href: '/index.html', label: '產品列表', icon: '▦' },
+  { href: '/positioning.html', label: '產品定位策略', icon: '◎', group: '策略' },
+  { href: '/media.html', label: '媒體指引', icon: '✎', group: '策略' },
+  { href: '/survey.html', label: '問卷系統', icon: '☑', group: '檔期產出' },
+  { href: '/presale.html', label: '開賣倒數', icon: '⚑', group: '檔期產出' },
+  { href: '/social.html', label: '大量社群貼文', icon: '▤', group: '檔期產出' },
+  { href: '/closing.html', label: '結案倒數', icon: '⚐', group: '檔期產出' },
+  { href: '/campaign.html', label: '募資頁面', icon: '◧', group: '檔期產出' },
+  { href: '/history.html', label: '產出紀錄', icon: '◷', group: '記錄' },
+  { href: '/admin.html', label: '管理', adminOnly: true, icon: '⚙', group: '記錄' }
 ];
 
 // 管理員 email（只有這些帳號看得到「管理」標籤、能讀使用量）
@@ -418,33 +418,50 @@ async function renderSidebar() {
   const email = await getCurrentUserEmail();
   const isAdmin = ADMIN_EMAILS.includes(email);
   const items = NAV_ITEMS.filter(item => !item.adminOnly || isAdmin);
+
+  // 依 group 依序輸出，同組相鄰才印一次分組標題
+  let lastGroup;
+  const navHtml = items.map(item => {
+    let label = '';
+    if (item.group && item.group !== lastGroup) label = `<div class="nav-group-label">${UI.escapeHtml(item.group)}</div>`;
+    lastGroup = item.group;
+    const active = normalizePath(item.href) === current ? ' is-active' : '';
+    return `${label}<a href="${item.href}" class="nav-item${active}"><span class="nav-ico">${item.icon}</span>${item.label}</a>`;
+  }).join('');
+
   el.innerHTML = `
-    <div class="sidebar-logo">
-      <h1>嘖嘖線上文案系統</h1>
-      <span>Copywriting System</span>
+    <div class="sidebar__brand">
+      <div class="sidebar__logo">嘖</div>
+      <div>
+        <div class="sidebar__brand-name">線上文案系統</div>
+        <div class="sidebar__brand-sub">COPYWRITING</div>
+      </div>
     </div>
-    <nav>
-      ${items.map(item => `
-        <a href="${item.href}"${normalizePath(item.href) === current ? ' class="active"' : ''}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${item.icon}</svg>
-          ${item.label}
-        </a>
-      `).join('')}
-      <a href="https://drive.google.com/drive/folders/13T6Fpdd4Z66Vz3RrRKybzbUGQB36ZcCM" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        文案生成資料夾
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;margin-left:auto;opacity:0.55;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-      </a>
-    </nav>
-    <div class="sidebar-footer">
-      ${email ? `<div class="sidebar-user">${UI.escapeHtml(email)}</div>` : ''}
-      <a class="logout-link" href="/cdn-cgi/access/logout">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        登出
-      </a>
+    <nav style="display:contents">${navHtml}</nav>
+    <div class="sidebar__spacer"></div>
+    <div class="sidebar__footer">
+      ${email ? `<div class="sidebar__user">${UI.escapeHtml(email)}</div>` : ''}
+      <a class="nav-item" href="https://drive.google.com/drive/folders/13T6Fpdd4Z66Vz3RrRKybzbUGQB36ZcCM" target="_blank" rel="noopener"><span class="nav-ico">🗀</span>文案生成資料夾 ↗</a>
+      <a class="nav-item" href="/cdn-cgi/access/logout"><span class="nav-ico">⇥</span>登出</a>
     </div>`;
 
   setupMobileNav();
+}
+
+// 行動裝置：main-content 內插入固定頂列（品牌 + 漢堡），標題取自 <title>「X — 嘖嘖線上文案系統」的 X
+function renderTopbar() {
+  const main = document.querySelector('.main-content');
+  if (!main || document.querySelector('.topbar')) return;
+  const title = (document.title || '').split(' — ')[0] || '嘖嘖線上文案系統';
+  const bar = document.createElement('div');
+  bar.className = 'topbar';
+  bar.innerHTML = `
+    <div class="topbar__brand">
+      <div class="topbar__logo">嘖</div>
+      <span class="topbar__title">${UI.escapeHtml(title)}</span>
+    </div>
+    <button class="topbar__menu" aria-label="選單" onclick="toggleMobileNav()">☰</button>`;
+  main.insertBefore(bar, main.firstChild);
 }
 
 // 行動裝置：漢堡選單按鈕 + 背景遮罩（點選導覽或遮罩自動收合）
@@ -452,15 +469,8 @@ function setupMobileNav() {
   const sidebar = document.getElementById('sidebar');
   if (!sidebar) return;
 
-  if (!document.getElementById('nav-toggle')) {
-    const btn = document.createElement('button');
-    btn.id = 'nav-toggle';
-    btn.className = 'nav-toggle';
-    btn.setAttribute('aria-label', '選單');
-    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
-    btn.onclick = toggleMobileNav;
-    document.body.appendChild(btn);
-  }
+  renderTopbar();
+
   if (!document.getElementById('nav-backdrop')) {
     const bd = document.createElement('div');
     bd.id = 'nav-backdrop';
@@ -469,16 +479,16 @@ function setupMobileNav() {
     document.body.appendChild(bd);
   }
   // 點任一導覽連結後自動收合
-  sidebar.querySelectorAll('nav a').forEach(a => a.addEventListener('click', closeMobileNav));
+  sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMobileNav));
 }
 
 function toggleMobileNav() {
-  document.getElementById('sidebar')?.classList.toggle('open');
+  document.getElementById('sidebar')?.classList.toggle('is-open');
   document.getElementById('nav-backdrop')?.classList.toggle('show');
 }
 
 function closeMobileNav() {
-  document.getElementById('sidebar')?.classList.remove('open');
+  document.getElementById('sidebar')?.classList.remove('is-open');
   document.getElementById('nav-backdrop')?.classList.remove('show');
 }
 

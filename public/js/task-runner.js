@@ -21,28 +21,26 @@
   let currentController = null; // 目前串流的 AbortController（供「停止產生」用）
   let stopRequested = false;    // 使用者是否按下停止
 
-  // === Styles（與 generate.html 一致，集中注入避免每頁重複） ===
+  // === Styles（集中注入避免每頁重複） ===
   function injectStyles() {
     const css = `
       .revision-input { display: flex; gap: 8px; margin-top: 16px; align-items: flex-end; }
       .revision-input textarea { flex: 1; resize: none; min-height: 44px; max-height: 200px; line-height: 1.5; overflow-y: auto; }
-      .token-info { font-size: 12px; color: var(--gray-400); margin-top: 8px; }
+      .token-info { font-size: 12px; color: var(--text-faint); margin-top: 8px; }
       .output-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-      .btn-drive { background: #1a73e8; color: #fff; border: none; }
-      .btn-drive:hover { background: #1557b0; }
-      .drive-result { margin-top: 12px; padding: 12px 16px; background: rgba(26,115,232,0.08); border-radius: 8px; font-size: 14px; }
-      .drive-result a { color: #1a73e8; font-weight: 600; text-decoration: none; }
+      .drive-result { margin-top: 12px; padding: 12px 16px; background: var(--brand-tint); border-radius: var(--radius); font-size: 14px; }
+      .drive-result a { color: var(--brand-hover); font-weight: 700; text-decoration: none; }
       .drive-result a:hover { text-decoration: underline; }
-      .msg-time { font-size: 12px; color: var(--gray-400); margin-top: 8px; }
+      .msg-time { font-size: 12px; color: var(--text-faint); margin-top: 8px; }
       .gen-indicator {
         position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
-        background: #1a73e8; color: #fff; padding: 9px 18px; border-radius: 999px;
+        background: var(--ink); color: #fff; padding: 9px 18px; border-radius: 999px;
         font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 9px;
-        box-shadow: 0 6px 18px rgba(26,115,232,0.35); z-index: 200;
+        box-shadow: var(--shadow-pop); z-index: 200;
       }
       .gen-indicator.hidden { display: none; }
       .gen-indicator .gen-dot {
-        width: 8px; height: 8px; border-radius: 50%; background: #fff;
+        width: 8px; height: 8px; border-radius: 50%; background: var(--brand);
         animation: genpulse 1s ease-in-out infinite;
       }
       @keyframes genpulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
@@ -65,68 +63,65 @@
     const main = document.getElementById('task-main');
     main.innerHTML = `
       <div class="page-header">
-        <h2>${esc(CFG.title || '文案產出')}</h2>
-        ${CFG.desc ? `<p class="text-muted text-sm">${esc(CFG.desc)}</p>` : ''}
+        <div>
+          ${CFG.eyebrow ? `<div class="page-header__eyebrow">${esc(CFG.eyebrow)}</div>` : ''}
+          <h1 class="page-title">${esc(CFG.title || '文案產出')}</h1>
+          ${CFG.desc ? `<div class="page-subtitle">${esc(CFG.desc)}</div>` : ''}
+        </div>
       </div>
 
       <div class="card">
-        <div class="form-group">
-          <label>選擇產品 *</label>
-          <select id="product-select"><option value="">載入中...</option></select>
+        <div class="runner-input">
+          <div class="form-group">
+            <label class="form-label">選擇產品 <span class="req">*</span></label>
+            <select class="select" id="product-select"><option value="">載入中...</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">補充指令 <span class="optional">選填</span></label>
+            <textarea class="textarea" id="user-prompt" rows="3" placeholder="${esc(CFG.placeholder || '例：語氣輕鬆一點、目標受眾是年輕上班族…')}"></textarea>
+          </div>
+          <div style="text-align:right">
+            <button class="btn btn-primary btn-lg" id="generate-btn" onclick="TaskRunner.startGenerate()">✎ 開始產出</button>
+          </div>
         </div>
-        <div class="form-group">
-          <label>補充指令 <span class="optional">選填</span></label>
-          <textarea id="user-prompt" rows="3" placeholder="${esc(CFG.placeholder || '例：語氣輕鬆一點、目標受眾是年輕上班族…')}"></textarea>
-        </div>
-        <button class="btn btn-primary btn-lg" style="width:100%;" id="generate-btn" onclick="TaskRunner.startGenerate()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          開始產出
-        </button>
       </div>
 
-      <div class="card">
-        <div class="card-header">
-          <h3 style="font-size:16px; margin:0; padding:0; border:0;">產出結果</h3>
-          <div id="status-badge" class="text-sm text-muted">等待產出</div>
-        </div>
-
-        <div id="conversation" class="conversation">
-          <div class="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;">
-              <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-            </svg>
-            <h3>選擇產品後開始產出</h3>
-            <p>AI 會根據產品資訊和文案方法論，產出符合風格的文案</p>
+      <div class="output-area">
+        <div class="output-area__bar">
+          <div class="output-area__title">
+            <strong>產出結果</strong>
+            <span id="status-badge" class="output-status"><span class="dot"></span>等待產出</span>
           </div>
         </div>
+        <div class="output-area__body">
+          <div id="conversation" class="conversation">
+            <div class="empty-state" style="border:none;box-shadow:none;padding:40px 20px;">
+              <div class="empty-state__ico">✎</div>
+              <div class="empty-state__title">選擇產品後開始產出</div>
+              <div class="empty-state__text">AI 會根據產品資訊和文案方法論，產出符合風格的文案</div>
+            </div>
+          </div>
 
-        <div id="revision-area" class="hidden">
-          <div class="revision-input">
-            <textarea id="revision-input" rows="1" placeholder="輸入修改指令，例：「語氣再強烈一點」「加入價格比較」（Enter 送出 · Shift+Enter 換行）"></textarea>
-            <button class="btn btn-primary" onclick="TaskRunner.sendRevision()">修改</button>
+          <div id="revision-area" class="hidden">
+            <div class="revision-input">
+              <textarea id="revision-input" rows="1" placeholder="輸入修改指令，例：「語氣再強烈一點」「加入價格比較」（Enter 送出 · Shift+Enter 換行）"></textarea>
+              <button class="btn btn-primary" onclick="TaskRunner.sendRevision()">修改</button>
+            </div>
+            <div class="output-actions">
+              <button class="btn btn-sm btn-dark" onclick="TaskRunner.saveToDrive()" id="drive-btn">存到 Google Doc</button>
+              <a class="btn btn-sm btn-outline" href="https://drive.google.com/drive/folders/13T6Fpdd4Z66Vz3RrRKybzbUGQB36ZcCM?usp=drive_link" target="_blank" rel="noopener">前往雲端</a>
+              <button class="btn btn-sm btn-outline" onclick="TaskRunner.copyOutput()">⧉ 複製文案</button>
+              <button class="btn btn-sm btn-ghost" onclick="TaskRunner.resetConversation()">重新開始</button>
+            </div>
+            <div id="drive-result" class="drive-result hidden"></div>
+            <div class="token-info" id="token-info"></div>
           </div>
-          <div class="output-actions">
-            <button class="btn btn-sm btn-drive" onclick="TaskRunner.saveToDrive()" id="drive-btn">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> 存到 Google Doc
-            </button>
-            <a class="btn btn-sm btn-drive" href="https://drive.google.com/drive/folders/13T6Fpdd4Z66Vz3RrRKybzbUGQB36ZcCM?usp=drive_link" target="_blank" rel="noopener">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-              前往雲端
-            </a>
-            <button class="btn btn-sm btn-secondary" onclick="TaskRunner.copyOutput()">複製文案</button>
-            <button class="btn btn-sm btn-secondary" onclick="TaskRunner.resetConversation()">重新開始</button>
-          </div>
-          <div id="drive-result" class="drive-result hidden"></div>
-          <div class="token-info" id="token-info"></div>
         </div>
       </div>
 
       <div id="gen-indicator" class="gen-indicator hidden">
         <span class="gen-dot"></span> 文案生成中…
-        <button class="gen-stop-btn" onclick="TaskRunner.stopGenerate()" title="停止產生">
-          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-          停止產生
-        </button>
+        <button class="gen-stop-btn" onclick="TaskRunner.stopGenerate()" title="停止產生">■ 停止產生</button>
       </div>`;
   }
 
@@ -347,13 +342,13 @@
     const div = document.createElement('div');
     div.className = 'message message-ai';
     div.id = 'streaming-msg';
-    div.innerHTML = `<div class="message-label">AI</div><div class="message-content output-area streaming cursor-blink"></div>`;
+    div.innerHTML = `<div class="message-label">AI</div><div class="message-content"><span class="stream-text"></span><span class="cursor-blink"></span></div>`;
     convEl.appendChild(div);
     scrollToBottomIfAuto();
   }
 
   function updateStreamingMessage(text) {
-    const el = document.querySelector('#streaming-msg .message-content');
+    const el = document.querySelector('#streaming-msg .stream-text');
     if (el) {
       el.textContent = text;
       scrollToBottomIfAuto();
@@ -361,8 +356,8 @@
   }
 
   function finalizeStreamingMessage() {
-    const el = document.querySelector('#streaming-msg .message-content');
-    if (el) el.classList.remove('streaming', 'cursor-blink');
+    const cursor = document.querySelector('#streaming-msg .cursor-blink');
+    if (cursor) cursor.remove();
     const msg = $('streaming-msg');
     if (msg) {
       msg.removeAttribute('id');
@@ -451,16 +446,14 @@
     totalInputTokens = 0;
     totalOutputTokens = 0;
     $('conversation').innerHTML = `
-      <div class="empty-state">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;">
-          <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-        </svg>
-        <h3>選擇產品後開始產出</h3>
-        <p>AI 會根據產品資訊和文案方法論，產出符合風格的文案</p>
+      <div class="empty-state" style="border:none;box-shadow:none;padding:40px 20px;">
+        <div class="empty-state__ico">✎</div>
+        <div class="empty-state__title">選擇產品後開始產出</div>
+        <div class="empty-state__text">AI 會根據產品資訊和文案方法論，產出符合風格的文案</div>
       </div>`;
     $('revision-area').classList.add('hidden');
     $('drive-result').classList.add('hidden');
-    $('status-badge').textContent = '等待產出';
+    $('status-badge').innerHTML = '<span class="dot"></span>等待產出';
     $('token-info').textContent = '';
   }
 

@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>問卷系統 — 嘖嘖線上文案系統</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -14,23 +16,26 @@
     <!-- Main -->
     <main class="main-content">
       <div class="page-header">
-        <h2>問卷系統</h2>
+        <div>
+          <div class="page-header__eyebrow">檔期產出</div>
+          <h1 class="page-title">問卷系統</h1>
+        </div>
       </div>
 
       <!-- 設定 -->
       <div class="card">
         <div class="form-group">
-          <label>選擇產品</label>
-          <select id="product-select"><option value="">載入中...</option></select>
+          <label class="form-label">選擇產品</label>
+          <select class="select" id="product-select"><option value="">載入中...</option></select>
         </div>
         <div class="form-group">
-          <label>問卷平台</label>
-          <div class="flex gap-4">
-            <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;">
-              <input type="radio" name="platform" value="typeform" checked style="width:auto;"> Typeform（逐張圖卡沉浸式）
+          <label class="form-label">問卷平台</label>
+          <div class="radio-group">
+            <label class="radio-opt">
+              <input type="radio" name="platform" value="typeform" checked> Typeform（逐張圖卡沉浸式）
             </label>
-            <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;">
-              <input type="radio" name="platform" value="surveycake" style="width:auto;"> SurveyCake（長頁滾動互動式 HTML）
+            <label class="radio-opt">
+              <input type="radio" name="platform" value="surveycake"> SurveyCake（長頁滾動互動式 HTML）
             </label>
           </div>
         </div>
@@ -38,39 +43,39 @@
 
       <!-- 階段一：問卷文案 -->
       <div class="card">
-        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-          <h3 style="margin:0;">① 問卷文案</h3>
+        <div class="card-header">
+          <h3 style="margin:0;"><span class="stage-num">1</span>問卷文案</h3>
           <div class="flex gap-2">
-            <button class="btn btn-primary" id="btn-gen-copy" onclick="generateCopy()">產生問卷文案</button>
-            <button class="btn btn-secondary" id="btn-save-doc" onclick="saveDoc()" disabled>存到 Google Doc</button>
+            <button class="btn btn-primary btn-sm" id="btn-gen-copy" onclick="generateCopy()">產生問卷文案</button>
+            <button class="btn btn-dark btn-sm" id="btn-save-doc" onclick="saveDoc()" disabled>存到 Google Doc</button>
           </div>
         </div>
         <p class="text-muted text-sm mb-2">產出可直接使用的問卷文案（含題型、配圖位置標註、圖片製作清單）。存到 Google Doc 後可一鍵下載成 .docx。</p>
-        <pre id="copy-output" style="white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.7;background:var(--gray-50,#f8f9fb);border:1px solid var(--gray-200,#e5e7eb);border-radius:8px;padding:16px;min-height:120px;margin:0;"></pre>
+        <pre id="copy-output" class="output-area" style="white-space:pre-wrap;font-family:var(--font-mono);font-size:14px;line-height:1.7;padding:16px;min-height:120px;margin:0;"></pre>
         <div id="doc-result" class="text-sm mt-2"></div>
       </div>
 
       <!-- 階段二：配圖設計稿 HTML -->
       <div class="card">
-        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-          <h3 style="margin:0;">② 配圖設計稿（HTML）</h3>
+        <div class="card-header">
+          <h3 style="margin:0;"><span class="stage-num">2</span>配圖設計稿（HTML）</h3>
           <div class="flex gap-2">
-            <button class="btn btn-primary" id="btn-gen-html" onclick="generateHtml()" disabled>產生配圖設計稿</button>
-            <button class="btn btn-secondary" id="btn-save-html" onclick="saveHtmlFile()" disabled>存到雲端（.html）</button>
+            <button class="btn btn-primary btn-sm" id="btn-gen-html" onclick="generateHtml()" disabled>產生配圖設計稿</button>
+            <button class="btn btn-dark btn-sm" id="btn-save-html" onclick="saveHtmlFile()" disabled>存到雲端（.html）</button>
           </div>
         </div>
         <p class="text-muted text-sm mb-2">產出可在瀏覽器開啟、截圖或交給設計師的 HTML 設計稿。請先完成步驟①。</p>
         <div id="html-status" class="text-sm text-muted"></div>
-        <iframe id="html-preview" class="hidden" style="width:100%;height:600px;border:1px solid var(--gray-200,#e5e7eb);border-radius:8px;margin-top:8px;background:#fff;"></iframe>
+        <iframe id="html-preview" class="hidden" style="width:100%;height:600px;border:1px solid var(--line);border-radius:var(--radius);margin-top:8px;background:#fff;"></iframe>
         <div id="html-result" class="text-sm mt-2"></div>
       </div>
 
       <!-- 階段三：自動建立 Typeform — 暫緩(TYPEFORM_API_TOKEN 未設定)，卡片先隱藏。
            之後要啟用：把 wrangler.toml/Cloudflare Secret 補上 token，把下面 class 的 hidden 拿掉即可。 -->
       <div class="card hidden" id="typeform-card">
-        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-          <h3 style="margin:0;">③ 自動完成初版 Typeform</h3>
-          <button class="btn btn-success" id="btn-create-tf" onclick="createTypeformForm()" disabled>自動建立 Typeform 問卷</button>
+        <div class="card-header">
+          <h3 style="margin:0;"><span class="stage-num">3</span>自動完成初版 Typeform</h3>
+          <button class="btn btn-primary btn-sm" id="btn-create-tf" onclick="createTypeformForm()" disabled>自動建立 Typeform 問卷</button>
         </div>
         <p class="text-muted text-sm mb-2">透過 Typeform API 用步驟①的文案自動建立整份問卷（歡迎頁＋所有題目＋感謝頁）。Token 已在後端設定，免輸入。請先完成步驟①。</p>
         <div id="tf-result" class="text-sm mt-2"></div>

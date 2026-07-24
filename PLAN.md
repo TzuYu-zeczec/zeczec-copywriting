@@ -1,7 +1,7 @@
 # 嘖嘖線上文案系統 — Plan
 > 把原系統文案交接包重現為嘖嘖（zeczec）內容中心版：帳號資源全換、認證改共用雲端硬碟路線、平台字眼全面反轉、模型升級
 > 狀態：in-progress
-> 最後更新：2026-07-19
+> 最後更新：2026-07-24
 
 ## 為什麼做
 Jerry（原開發者，jerry@ontoo.cc → jerry@zeczec.com）從原系統換到嘖嘖，手上有一包完整交接檔（`~/Downloads/【銜接資料夾】/線上文案系統 - 開發交接包/`：程式碼＋12 Skills＋8 Memory＋兩份手冊）。目標是在嘖嘖重建同等系統給內容中心團隊用——非工程師在瀏覽器裡「選產品 → AI 依方法論串流產文案 → 一鍵存 Google 雲端」。原架構依賴的雲端資源（Cloudflare 專案、ontoo.cc Workspace、flyingfive 帳號、金鑰）全不可沿用，且 Jerry 無 zeczec Workspace 管理員權限，原「Service Account 全網域委派冒充」路線不可行，改走共用雲端硬碟。
@@ -16,6 +16,13 @@ Jerry（原開發者，jerry@ontoo.cc → jerry@zeczec.com）從原系統換到�
 - 部署：Cloudflare Pages 專案 `zeczec-copywriting`（既有帳號）＋ Access 限 @zeczec.com
 - **受眾矩陣整條線移除**（Task 8 後追加，決策 #9）：刪 `public/matrix.html`、`functions/api/create-sheet.js`、`sheets.js` 的 `createNewSpreadsheet`；`app.js` 拿掉 NAV_ITEMS／SKILL_NAMES 對應項與 `API.createSheet`；`task-runner.js` 拿掉 `SAVE_SHEETS` 分支；`generate.html` 拿掉 sheets 按鈕與 `saveToSheets()`
 - 不做：未來擴充清單全不納 v1（貼網址匯入、KV 快取、市調功能）；不建任何會回傳環境變數的 debug 端點；受眾矩陣功能（使用者決定不需要）
+- **UI 全面翻新**（Task 9 後追加，決策 #10）：依使用者提供的設計交接（`~/Downloads/output/交接規格.md`＋`style.css`，設計語言「文稿工作室」）整套套用 —
+  - `public/css/style.css` 全面改版：暖白紙感底、嘖嘖綠 `#069668` 升為主行動色、Noto Sans TC + DM Mono；舊 token/utility class（`--gray-*`／`--primary`／`.hidden`／`.flex`／modal／table／conversation 等）全部保留別名相容，零功能改動
+  - 側欄改分組導覽（策略／檔期產出／記錄）＋手機版改頂列漢堡選單；`app.js` 的 `renderSidebar`/`setupMobileNav` 重寫
+  - `index.html` 產品列表改卡片格線（`product-grid`）；`product.html` 加左側錨點導覽＋捲動高亮；`survey.html` 加階段圓形序號；`task-runner.js` 產出頁引擎（7 頁共用）改新版面
+  - 檔名反映功能語意：`launch.html`→`presale.html`、`batch.html`→`social.html`、`page.html`→`campaign.html`（`git mv`，`app.js` NAV_ITEMS 同步更新；因尚未 Task 8 首次部署，改名零風險）
+  - 各頁 `<head>` 加 Google Fonts 連結
+  - 範圍不含：`generate.html`（未串接進 NAV_ITEMS 的舊版遺留檔，非本次翻新對象，留給使用者日後決定是否清掉）
 
 ## 任務
 - [x] 1. 前置檢查與雲端容器：確認 jerry@zeczec.com 能自建共用雲端硬碟 → 建「嘖嘖線上文案系統」共用雲端硬碟＋skills／memory／線上文案生成區三資料夾＋資料庫 Sheet（Products A:AI 35 欄、Generations A:M 13 欄，欄位照交接手冊 5.1，第 1 列標題）【需使用者操作 Drive；若不能建共用雲端硬碟 → escape hatch 停下回報】
@@ -49,6 +56,7 @@ Jerry（原開發者，jerry@ontoo.cc → jerry@zeczec.com）從原系統換到�
 | 7 | 功能範圍 | 原樣復刻，擴充清單不納 v1 | 降低重建風險；市調已驗證本地跑較划算 |
 | 9 | 受眾矩陣（persona-matrix） | Task 8 後決定整條線移除（非僅不上傳 skill） | 使用者明確表示這個系統之後都不需要；移除 `matrix.html`＋側欄項＋`/api/create-sheet`＋`createNewSpreadsheet`＋task-runner 的 SAVE_SHEETS 分支＋generate.html 的 sheets 按鈕，避免留下指向不存在 skill 的死連結；全部在 git 版控下、可回溯 |
 | 8 | 版控 | 第一天 git init＋GitHub 私有庫 | 原專案無版控是交接文件明載的遺憾 |
+| 10 | UI 翻新落地方式 | 舊 CSS 變數/utility class 全保留別名，不逐一改寫既有 JS 產生的 markup | 既有功能（智慧合併比對、批次匯入、串流續寫等）邏輯複雜，重寫風險高於效益；別名讓新色票/字體零成本套用到所有既有畫面，只在設計交接明確給範例的頁面（側欄、產品列表、產品表單、產出頁引擎、問卷頁）才動 markup 結構 |
 
 ## 架構
 ```
