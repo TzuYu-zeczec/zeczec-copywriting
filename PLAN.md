@@ -14,7 +14,8 @@ Jerry（原開發者，jerry@ontoo.cc → jerry@zeczec.com）從原系統換到�
 - **內容資產**：12 Skills＋8 Memory 平台字眼機械反轉（方法論不動），產出「嘖嘖規格缺口清單」，上傳共用雲端硬碟
 - **Typeform 暫緩**：程式碼保留，`survey.html` 隱藏「自動建立 Typeform」按鈕、不設 token
 - 部署：Cloudflare Pages 專案 `zeczec-copywriting`（既有帳號）＋ Access 限 @zeczec.com
-- 不做：未來擴充清單全不納 v1（貼網址匯入、KV 快取、市調功能）；不建任何會回傳環境變數的 debug 端點
+- **受眾矩陣整條線移除**（Task 8 後追加，決策 #9）：刪 `public/matrix.html`、`functions/api/create-sheet.js`、`sheets.js` 的 `createNewSpreadsheet`；`app.js` 拿掉 NAV_ITEMS／SKILL_NAMES 對應項與 `API.createSheet`；`task-runner.js` 拿掉 `SAVE_SHEETS` 分支；`generate.html` 拿掉 sheets 按鈕與 `saveToSheets()`
+- 不做：未來擴充清單全不納 v1（貼網址匯入、KV 快取、市調功能）；不建任何會回傳環境變數的 debug 端點；受眾矩陣功能（使用者決定不需要）
 
 ## 任務
 - [x] 1. 前置檢查與雲端容器：確認 jerry@zeczec.com 能自建共用雲端硬碟 → 建「嘖嘖線上文案系統」共用雲端硬碟＋skills／memory／線上文案生成區三資料夾＋資料庫 Sheet（Products A:AI 35 欄、Generations A:M 13 欄，欄位照交接手冊 5.1，第 1 列標題）【需使用者操作 Drive；若不能建共用雲端硬碟 → escape hatch 停下回報】
@@ -46,6 +47,7 @@ Jerry（原開發者，jerry@ontoo.cc → jerry@zeczec.com）從原系統換到�
 | 5 | Skills 改編深度 | 機械反轉＋缺口清單，Drive 上迭代 | 方法論平台無關；基建與內容迭代解耦正是原架構甜頭；嘖嘖特定規格（頁面圖寬、渠道規範）只有使用者能補 |
 | 6 | 模型 | 升級 claude-sonnet-5 | 同級定位、能力更好，文案品質白拿的提升；計價常數同步核實 |
 | 7 | 功能範圍 | 原樣復刻，擴充清單不納 v1 | 降低重建風險；市調已驗證本地跑較划算 |
+| 9 | 受眾矩陣（persona-matrix） | Task 8 後決定整條線移除（非僅不上傳 skill） | 使用者明確表示這個系統之後都不需要；移除 `matrix.html`＋側欄項＋`/api/create-sheet`＋`createNewSpreadsheet`＋task-runner 的 SAVE_SHEETS 分支＋generate.html 的 sheets 按鈕，避免留下指向不存在 skill 的死連結；全部在 git 版控下、可回溯 |
 | 8 | 版控 | 第一天 git init＋GitHub 私有庫 | 原專案無版控是交接文件明載的遺憾 |
 
 ## 架構

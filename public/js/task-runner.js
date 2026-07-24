@@ -5,8 +5,6 @@
  */
 (function () {
   const CFG = window.TASK_CONFIG || {};
-  // saveTarget: 'doc'（預設，存 Google Doc）或 'sheets'（用 /api/create-sheet 建受眾矩陣 Google Sheets）
-  const SAVE_SHEETS = CFG.saveTarget === 'sheets';
 
   // === State ===
   let selectedProductId = '';
@@ -109,9 +107,7 @@
           </div>
           <div class="output-actions">
             <button class="btn btn-sm btn-drive" onclick="TaskRunner.saveToDrive()" id="drive-btn">
-              ${SAVE_SHEETS
-                ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg> 建立 Google Sheets`
-                : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> 存到 Google Doc`}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> 存到 Google Doc
             </button>
             <a class="btn btn-sm btn-drive" href="https://drive.google.com/drive/folders/13T6Fpdd4Z66Vz3RrRKybzbUGQB36ZcCM?usp=drive_link" target="_blank" rel="noopener">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -432,29 +428,18 @@
     const btn = $('drive-btn');
     const resultEl = $('drive-result');
     btn.disabled = true;
-    btn.innerHTML = SAVE_SHEETS
-      ? '<div class="loading-spinner" style="width:14px;height:14px;"></div> 建立中（約 3 分鐘，請稍候）...'
-      : '<div class="loading-spinner" style="width:14px;height:14px;"></div> 儲存中...';
+    btn.innerHTML = '<div class="loading-spinner" style="width:14px;height:14px;"></div> 儲存中...';
 
     try {
-      if (SAVE_SHEETS) {
-        const data = await API.createSheet(lastAi.content, getProductName());
-        resultEl.innerHTML = `📊 已建立 Google Sheets — <a href="${data.url}" target="_blank">開啟「${esc(data.title)}」</a>（${data.audienceCount} 個受眾）`;
-        resultEl.classList.remove('hidden');
-        UI.toast('已建立 Google Sheets', 'success');
-      } else {
-        const data = await API.saveToDrive(lastAi.content, getProductName(), CFG.title || '文案');
-        resultEl.innerHTML = `✅ 已存到 Google Doc — <a href="${data.docUrl}" target="_blank">開啟「${esc(data.title)}」</a>（可在 Google Docs「下載成 .docx」）`;
-        resultEl.classList.remove('hidden');
-        UI.toast('已存到 Google Doc', 'success');
-      }
+      const data = await API.saveToDrive(lastAi.content, getProductName(), CFG.title || '文案');
+      resultEl.innerHTML = `✅ 已存到 Google Doc — <a href="${data.docUrl}" target="_blank">開啟「${esc(data.title)}」</a>（可在 Google Docs「下載成 .docx」）`;
+      resultEl.classList.remove('hidden');
+      UI.toast('已存到 Google Doc', 'success');
     } catch (e) {
       UI.toast('儲存失敗：' + e.message, 'error');
     } finally {
       btn.disabled = false;
-      btn.innerHTML = SAVE_SHEETS
-        ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg> 建立 Google Sheets`
-        : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> 存到 Google Doc`;
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> 存到 Google Doc`;
     }
   }
 

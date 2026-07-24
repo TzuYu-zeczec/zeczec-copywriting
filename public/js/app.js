@@ -282,18 +282,6 @@ const API = {
     return res.json();
   },
 
-  // === 受眾矩陣 → Google Sheets ===
-  async createSheet(content, productName) {
-    const res = await fetch('/api/create-sheet', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, productName })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || '建立 Google Sheets 失敗');
-    return data;
-  },
-
   // === Token 使用量（管理員）===
   async getUsage(month) {
     const qs = month ? ('?month=' + encodeURIComponent(month)) : '';
@@ -396,15 +384,13 @@ const SKILL_NAMES = {
   'crowdfunding-survey': '募資前測問卷',
   'launch-countdown': '開賣倒數宣傳',
   'media-guide': '媒體投放指引',
-  'page-copy-framework': '頁面文案框架',
-  'persona-matrix': '受眾輪廓矩陣'
+  'page-copy-framework': '頁面文案框架'
 };
 
 // === Sidebar (single source of truth) ===
 const NAV_ITEMS = [
   { href: '/index.html', label: '產品列表', icon: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>' },
   { href: '/positioning.html', label: '產品定位策略', icon: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>' },
-  { href: '/matrix.html', label: '受眾矩陣', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/>' },
   { href: '/media.html', label: '媒體指引', icon: '<path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>' },
   { href: '/survey.html', label: '問卷系統', icon: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>' },
   { href: '/launch.html', label: '開賣倒數', icon: '<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 18l-1.5-1.5"/>' },

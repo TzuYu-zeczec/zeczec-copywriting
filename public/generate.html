@@ -14,8 +14,6 @@
     .output-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
     .btn-drive { background: #1a73e8; color: #fff; border: none; }
     .btn-drive:hover { background: #1557b0; }
-    .btn-sheets { background: #0f9d58; color: #fff; border: none; }
-    .btn-sheets:hover { background: #0b8043; }
     .btn-typeform { background: #262627; color: #fff; border: none; }
     .btn-typeform:hover { background: #404041; }
     .drive-result { margin-top: 12px; padding: 12px 16px; background: rgba(26,115,232,0.08); border-radius: 8px; font-size: 14px; }
@@ -105,10 +103,6 @@
                 <button class="btn btn-sm btn-drive" onclick="saveToDrive()" id="drive-btn">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                   存到 Google Drive
-                </button>
-                <button class="btn btn-sm btn-sheets hidden" onclick="saveToSheets()" id="sheets-btn">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-                  存到 Google Sheets
                 </button>
                 <button class="btn btn-sm btn-typeform hidden" onclick="createTypeform()" id="typeform-btn">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -231,7 +225,6 @@
     }
 
     // Skills that produce specific output types
-    const SHEET_SKILLS = ['persona-matrix'];
     const TYPEFORM_SKILLS = ['crowdfunding-survey'];
 
     function selectSkill(id, name) {
@@ -239,13 +232,8 @@
       document.querySelectorAll('.skill-card').forEach(c => c.classList.remove('selected'));
       document.querySelector(`.skill-card[data-skill-id="${id}"]`)?.classList.add('selected');
 
-      // Show/hide special buttons based on skill type
-      const sheetsBtn = document.getElementById('sheets-btn');
+      // Show/hide special button based on skill type
       const typeformBtn = document.getElementById('typeform-btn');
-      if (sheetsBtn) {
-        if (SHEET_SKILLS.includes(name)) sheetsBtn.classList.remove('hidden');
-        else sheetsBtn.classList.add('hidden');
-      }
       if (typeformBtn) {
         if (TYPEFORM_SKILLS.includes(name)) typeformBtn.classList.remove('hidden');
         else typeformBtn.classList.add('hidden');
@@ -464,38 +452,6 @@
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> 建立 Typeform 問卷`;
-      }
-    }
-
-    async function saveToSheets() {
-      const lastAi = conversationHistory.filter(m => m.role === 'assistant').pop();
-      if (!lastAi) { UI.toast('沒有可儲存的內容', 'error'); return; }
-
-      const btn = document.getElementById('sheets-btn');
-      const resultEl = document.getElementById('drive-result');
-      btn.disabled = true;
-      btn.innerHTML = '<div class="loading-spinner" style="width:14px;height:14px;"></div> 建立中（約 10 秒）...';
-
-      try {
-        const res = await fetch('/api/create-sheet', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content: lastAi.content,
-            productName: selectedProduct?.name || '產品'
-          })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || '建立失敗');
-
-        resultEl.innerHTML = `📊 已建立 Google Sheets — <a href="${data.url}" target="_blank">開啟「${UI.escapeHtml(data.title)}」</a>（${data.audienceCount} 個受眾）`;
-        resultEl.classList.remove('hidden');
-        UI.toast('已建立 Google Sheets', 'success');
-      } catch (e) {
-        UI.toast('建立失敗：' + e.message, 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg> 存到 Google Sheets`;
       }
     }
 
