@@ -3,7 +3,7 @@
  */
 
 // 嘖嘖官方 logomark（來源：assets.zeczec.com/static/logomark.svg，自架於 /favicon.svg）
-// fill="currentColor" 繼承外層 .sidebar__logo / .topbar__logo 的白字色，套在品牌綠底上
+// fill="currentColor" 繼承外層 .topnav__logo 的白字色，套在品牌綠底上
 const LOGOMARK_SVG = '<svg viewBox="0 0 138.03 138.03" width="60%" height="60%" fill="currentColor"><path d="M69 0a69 69 0 1 0 69 69A69 69 0 0 0 69 0zm38.7 75.53l-1.55 7.18c-.23 1.18-.81 1.54-1.82 1.49l-40.48-1.9a1.72 1.72 0 0 1-1.43-2.2l2.3-11.94a2.05 2.05 0 0 0-1.87-2.23l-31-2.09c-1 0-1.57-.66-1.57-1.82l1.16-6.81c.22-1.15.8-1.43 1.84-1.37l41.94 2.32a1.94 1.94 0 0 1 1.72 2.13l-2.19 12.13a1.88 1.88 0 0 0 1.87 2.1l30.06 1.39c.93 0 1.24.53 1.03 1.62z"/></svg>';
 
 const API = {
@@ -415,85 +415,96 @@ function normalizePath(p) {
   return p;
 }
 
-async function renderSidebar() {
-  const el = document.getElementById('sidebar');
+async function renderTopNav() {
+  const el = document.getElementById('topnav');
   if (!el) return;
   const current = normalizePath(window.location.pathname);
   const email = await getCurrentUserEmail();
   const isAdmin = ADMIN_EMAILS.includes(email);
   const items = NAV_ITEMS.filter(item => !item.adminOnly || isAdmin);
 
-  // 依 group 依序輸出，同組相鄰才印一次分組標題
+  const isActive = item => normalizePath(item.href) === current;
+  const linkHtml = (item, extraClass) =>
+    `<a href="${item.href}" class="nav-item${isActive(item) ? ' is-active' : ''}${extraClass ? ' ' + extraClass : ''}"><span class="nav-ico">${item.icon}</span>${item.label}</a>`;
+
+  const topLevel = items.filter(i => !i.group);
+  const groupNames = [...new Set(items.filter(i => i.group).map(i => i.group))];
+  const groupsOf = name => items.filter(i => i.group === name);
+
+  // 桌機：頂層連結 + 分組下拉（組內含目前頁面就標記 has-active，維持方向感）
+  const desktopHtml = topLevel.map(i => linkHtml(i)).join('') + groupNames.map(name => {
+    const groupItems = groupsOf(name);
+    const hasActive = groupItems.some(isActive);
+    return `
+      <div class="nav-group${hasActive ? ' has-active' : ''}" data-group="${UI.escapeHtml(name)}">
+        <button type="button" class="nav-item" onclick="toggleNavGroup('${UI.escapeHtml(name)}')">${UI.escapeHtml(name)} <span class="caret">▾</span></button>
+        <div class="nav-dd">${groupItems.map(i => linkHtml(i)).join('')}</div>
+      </div>`;
+  }).join('');
+
+  // 手機：維持原本側欄式的分組直排清單（含分組標題），一次全部列出
   let lastGroup;
-  const navHtml = items.map(item => {
+  const mobileHtml = items.map(item => {
     let label = '';
     if (item.group && item.group !== lastGroup) label = `<div class="nav-group-label">${UI.escapeHtml(item.group)}</div>`;
     lastGroup = item.group;
-    const active = normalizePath(item.href) === current ? ' is-active' : '';
-    return `${label}<a href="${item.href}" class="nav-item${active}"><span class="nav-ico">${item.icon}</span>${item.label}</a>`;
+    return label + linkHtml(item);
   }).join('');
 
   el.innerHTML = `
-    <div class="sidebar__brand">
-      <div class="sidebar__logo">${LOGOMARK_SVG}</div>
+    <button class="topnav__menu-btn" aria-label="選單" onclick="toggleMobileNav()">☰</button>
+    <div class="topnav__brand">
+      <div class="topnav__logo">${LOGOMARK_SVG}</div>
       <div>
-        <div class="sidebar__brand-name">線上文案系統</div>
-        <div class="sidebar__brand-sub">COPYWRITING</div>
+        <div class="topnav__brand-name">線上文案系統</div>
+        <div class="topnav__brand-sub">COPYWRITING</div>
       </div>
     </div>
-    <nav style="display:contents">${navHtml}</nav>
-    <div class="sidebar__spacer"></div>
-    <div class="sidebar__footer">
-      ${email ? `<div class="sidebar__user">${UI.escapeHtml(email)}</div>` : ''}
+    <nav class="topnav__links">${desktopHtml}</nav>
+    <div class="topnav__spacer"></div>
+    <div class="topnav__right">
+      <a class="nav-item" href="https://drive.google.com/drive/folders/13T6Fpdd4Z66Vz3RrRKybzbUGQB36ZcCM" target="_blank" rel="noopener"><span class="nav-ico">🗀</span>文案生成資料夾 ↗</a>
+      ${email ? `<span class="topnav__user">${UI.escapeHtml(email)}</span>` : ''}
+      <a class="nav-item" href="/cdn-cgi/access/logout"><span class="nav-ico">⇥</span>登出</a>
+    </div>
+    <div class="topnav__mobile-panel" id="topnav-mobile-panel">
+      ${mobileHtml}
+      <div class="topnav__mobile-spacer"></div>
+      ${email ? `<div class="nav-group-label">${UI.escapeHtml(email)}</div>` : ''}
       <a class="nav-item" href="https://drive.google.com/drive/folders/13T6Fpdd4Z66Vz3RrRKybzbUGQB36ZcCM" target="_blank" rel="noopener"><span class="nav-ico">🗀</span>文案生成資料夾 ↗</a>
       <a class="nav-item" href="/cdn-cgi/access/logout"><span class="nav-ico">⇥</span>登出</a>
     </div>`;
 
-  setupMobileNav();
+  setupTopNav();
 }
 
-// 行動裝置：main-content 內插入固定頂列（品牌 + 漢堡），標題取自 <title>「X — 嘖嘖線上文案系統」的 X
-function renderTopbar() {
-  const main = document.querySelector('.main-content');
-  if (!main || document.querySelector('.topbar')) return;
-  const title = (document.title || '').split(' — ')[0] || '嘖嘖線上文案系統';
-  const bar = document.createElement('div');
-  bar.className = 'topbar';
-  bar.innerHTML = `
-    <div class="topbar__brand">
-      <div class="topbar__logo">${LOGOMARK_SVG}</div>
-      <span class="topbar__title">${UI.escapeHtml(title)}</span>
-    </div>
-    <button class="topbar__menu" aria-label="選單" onclick="toggleMobileNav()">☰</button>`;
-  main.insertBefore(bar, main.firstChild);
+// 桌機：分組下拉（點下拉本身、開別的組會收掉這組；點外面全部收掉）
+function toggleNavGroup(name) {
+  document.querySelectorAll('.nav-group').forEach(g => {
+    g.classList.toggle('is-open', g.dataset.group === name ? !g.classList.contains('is-open') : false);
+  });
 }
 
-// 行動裝置：漢堡選單按鈕 + 背景遮罩（點選導覽或遮罩自動收合）
-function setupMobileNav() {
-  const sidebar = document.getElementById('sidebar');
-  if (!sidebar) return;
-
-  renderTopbar();
-
-  if (!document.getElementById('nav-backdrop')) {
-    const bd = document.createElement('div');
-    bd.id = 'nav-backdrop';
-    bd.className = 'nav-backdrop';
-    bd.onclick = closeMobileNav;
-    document.body.appendChild(bd);
-  }
-  // 點任一導覽連結後自動收合
-  sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMobileNav));
+function closeAllNavGroups() {
+  document.querySelectorAll('.nav-group.is-open').forEach(g => g.classList.remove('is-open'));
 }
 
+function setupTopNav() {
+  document.removeEventListener('click', onDocClickCloseNav);
+  document.addEventListener('click', onDocClickCloseNav);
+}
+
+function onDocClickCloseNav(e) {
+  if (!e.target.closest('.nav-group')) closeAllNavGroups();
+}
+
+// 行動裝置：漢堡切換全螢幕收合面板
 function toggleMobileNav() {
-  document.getElementById('sidebar')?.classList.toggle('is-open');
-  document.getElementById('nav-backdrop')?.classList.toggle('show');
+  document.getElementById('topnav-mobile-panel')?.classList.toggle('is-open');
 }
 
 function closeMobileNav() {
-  document.getElementById('sidebar')?.classList.remove('is-open');
-  document.getElementById('nav-backdrop')?.classList.remove('show');
+  document.getElementById('topnav-mobile-panel')?.classList.remove('is-open');
 }
 
-document.addEventListener('DOMContentLoaded', renderSidebar);
+document.addEventListener('DOMContentLoaded', renderTopNav);

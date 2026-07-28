@@ -23,6 +23,7 @@ Jerry（原開發者，jerry@ontoo.cc → jerry@zeczec.com）從原系統換到�
   - 檔名反映功能語意：`launch.html`→`presale.html`、`batch.html`→`social.html`、`page.html`→`campaign.html`（`git mv`，`app.js` NAV_ITEMS 同步更新；因尚未 Task 8 首次部署，改名零風險）
   - 各頁 `<head>` 加 Google Fonts 連結
   - 範圍不含：`generate.html`（未串接進 NAV_ITEMS 的舊版遺留檔，非本次翻新對象，留給使用者日後決定是否清掉）
+- **導覽改頂部選單**（決策 #11）：側欄改成頂部固定列（`.app-shell` 改 `flex-direction: column`），9 個功能收進「策略／檔期產出／記錄」3 個下拉分組、目前頁所在分組會標色（`.nav-group.has-active`）維持方向感；手機版仍是漢堡展開全螢幕清單（等同原側欄內容）。`app.js` 的 `renderSidebar`/`renderTopbar`/`setupMobileNav` 三個函式整併重寫成 `renderTopNav`/`setupTopNav`；所有頁面掛載點從 `<aside class="sidebar" id="sidebar">` 改成 `<header class="topnav" id="topnav">`（12 個 HTML 檔同步）。**改版前版本保留對照**：git tag `ui-sidebar-nav-v1`＋獨立 Cloudflare Pages branch 部署 `https://sidebar-nav-archive.zeczec-copywriting.pages.dev`（不會被之後的部署覆蓋，正式站的 production branch 才會換成頂部選單）。
 
 ## 任務
 - [x] 1. 前置檢查與雲端容器：確認 jerry@zeczec.com 能自建共用雲端硬碟 → 建「嘖嘖線上文案系統」共用雲端硬碟＋skills／memory／線上文案生成區三資料夾＋資料庫 Sheet（Products A:AI 35 欄、Generations A:M 13 欄，欄位照交接手冊 5.1，第 1 列標題）【需使用者操作 Drive；若不能建共用雲端硬碟 → escape hatch 停下回報】
@@ -57,6 +58,8 @@ Jerry（原開發者，jerry@ontoo.cc → jerry@zeczec.com）從原系統換到�
 | 9 | 受眾矩陣（persona-matrix） | Task 8 後決定整條線移除（非僅不上傳 skill） | 使用者明確表示這個系統之後都不需要；移除 `matrix.html`＋側欄項＋`/api/create-sheet`＋`createNewSpreadsheet`＋task-runner 的 SAVE_SHEETS 分支＋generate.html 的 sheets 按鈕，避免留下指向不存在 skill 的死連結；全部在 git 版控下、可回溯 |
 | 8 | 版控 | 第一天 git init＋GitHub 私有庫 | 原專案無版控是交接文件明載的遺憾 |
 | 10 | UI 翻新落地方式 | 舊 CSS 變數/utility class 全保留別名，不逐一改寫既有 JS 產生的 markup | 既有功能（智慧合併比對、批次匯入、串流續寫等）邏輯複雜，重寫風險高於效益；別名讓新色票/字體零成本套用到所有既有畫面，只在設計交接明確給範例的頁面（側欄、產品列表、產品表單、產出頁引擎、問卷頁）才動 markup 結構 |
+| 11 | 導覽放側欄還是頂部 | 全面改頂部選單＋分組下拉 | 使用者看過 demo（側欄 vs 頂部選單即時切換對照）後選定；9 個功能收進 3 組下拉換取內容區更寬，用「目前分組標色」的方式補足方向感的損失 |
+| 12 | 舊側欄版本去留 | 不留在正式站裡（無雙模式切換），改用 git tag＋獨立 Cloudflare Pages branch 部署保存對照 | 使用者要「留著舊版本當對照」但這次是「全面更新」，正式站沒有理由背兩套導覽的維護成本；tag＋branch 部署零成本保留、且是真的能點進去比對的活網址，之後過時了可以直接砍掉該 branch |
 
 ## 架構
 ```

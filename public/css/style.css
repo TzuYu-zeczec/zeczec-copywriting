@@ -49,7 +49,6 @@
   --shadow-md: 0 8px 24px -12px rgba(30,36,34,.18);
   --shadow-pop: 0 24px 60px -30px rgba(30,36,34,.28);
 
-  --sidebar-w: 236px;
 
   --font: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -91,63 +90,83 @@ h1, h2, h3, h4 { margin: 0; letter-spacing: -0.4px; }
 ::-webkit-scrollbar-thumb { background: #dcd8d0; border-radius: 8px; }
 .mono { font-family: var(--font-mono); }
 
-/* ---------- 3. App shell ---------- */
-.app-shell { display: flex; min-height: 100vh; }
+/* ---------- 3. App shell（頂部選單）---------- */
+.app-shell { display: flex; flex-direction: column; min-height: 100vh; }
 
-.sidebar {
-  width: var(--sidebar-w);
-  flex-shrink: 0;
-  position: fixed;
-  inset: 0 auto 0 0;
-  background: var(--ink);
-  color: #a8ada9;
-  padding: 22px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow-y: auto;
-  z-index: 40;
+.topnav {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--ink); color: #b7bcb8;
+  display: flex; align-items: center; gap: 4px;
+  height: 60px; padding: 0 24px;
 }
-.sidebar__brand {
-  display: flex; align-items: center; gap: 10px;
-  padding: 4px 10px 18px;
-}
-.sidebar__logo {
-  width: 32px; height: 32px; border-radius: 9px;
+.topnav__brand { display: flex; align-items: center; gap: 10px; margin-right: 18px; flex-shrink: 0; }
+.topnav__logo {
+  width: 30px; height: 30px; border-radius: 8px;
   background: var(--brand); color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 900; font-size: 16px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.sidebar__brand-name { color: #fff; font-weight: 700; font-size: 14px; line-height: 1.2; }
-.sidebar__brand-sub { font-family: var(--font-mono); font-size: 10px; color: #6e736f; letter-spacing: 1px; }
+.topnav__logo svg { width: 60%; height: 60%; }
+.topnav__brand-name { color: #fff; font-weight: 700; font-size: 13.5px; line-height: 1.2; }
+.topnav__brand-sub { font-family: var(--font-mono); font-size: 9.5px; color: #6e736f; letter-spacing: 1px; }
 
-.nav-group-label {
-  font-family: var(--font-mono);
-  font-size: 10px; letter-spacing: 1.5px;
-  color: #5c625e;
-  padding: 16px 12px 6px;
-}
+.topnav__links { display: flex; align-items: center; gap: 2px; height: 100%; }
 .nav-item {
-  display: flex; align-items: center; gap: 11px;
-  padding: 9px 12px; border-radius: 9px;
-  color: #b7bcb8; font-size: 14px;
-  transition: background .12s, color .12s;
+  display: flex; align-items: center; gap: 7px; height: 100%; padding: 0 14px;
+  color: #b7bcb8; font-size: 13.5px; font-weight: 600;
+  background: none; border: none; font-family: inherit; cursor: pointer; white-space: nowrap;
+  transition: color .12s, background .12s;
 }
-.nav-item:hover { background: rgba(255,255,255,.05); color: #e4e6e3; }
-.nav-item .nav-ico { width: 16px; text-align: center; flex-shrink: 0; }
-.nav-item.is-active { background: var(--brand); color: #fff; font-weight: 700; }
-.nav-item.is-active:hover { background: var(--brand-hover); color: #fff; }
+.nav-item:hover { color: #fff; }
+.nav-item .nav-ico { flex-shrink: 0; opacity: .9; }
+.nav-item.is-active { color: #fff; box-shadow: inset 0 -2px 0 var(--brand); }
 
-.sidebar__spacer { flex: 1; }
-.sidebar__footer { border-top: 1px solid #2a302c; padding-top: 12px; display: flex; flex-direction: column; gap: 2px; }
-.sidebar__footer .nav-item { color: #8b908c; font-size: 13px; }
-.sidebar__user { font-size: 12px; color: #6e736f; padding: 0 12px 8px; word-break: break-all; }
+.nav-group { position: relative; height: 100%; }
+.nav-group > .nav-item { padding-right: 10px; }
+.nav-group .caret { font-size: 10px; opacity: .7; transition: transform .15s; margin-left: 2px; }
+.nav-group.is-open > .nav-item { color: #fff; background: rgba(255,255,255,.06); }
+.nav-group.is-open .caret { transform: rotate(180deg); }
+.nav-group.has-active > .nav-item { color: var(--brand); }
+.nav-group.has-active.is-open > .nav-item { color: #fff; }
+
+.nav-dd {
+  position: absolute; top: 100%; left: 0; margin-top: 6px; min-width: 200px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop); padding: 6px; display: none; flex-direction: column; gap: 1px;
+}
+.nav-group.is-open .nav-dd { display: flex; }
+.nav-dd .nav-item {
+  height: auto; padding: 9px 10px; border-radius: 8px; color: var(--text); font-weight: 500;
+}
+.nav-dd .nav-item:hover { background: var(--brand-tint); color: var(--brand-hover); }
+.nav-dd .nav-item.is-active { background: var(--brand-tint); color: var(--brand-hover); font-weight: 700; box-shadow: none; }
+
+.topnav__spacer { flex: 1; }
+.topnav__right { display: flex; align-items: center; gap: 16px; font-size: 12.5px; color: #9ea39d; }
+.topnav__right a.nav-item { padding: 0; height: auto; color: #b7bcb8; font-weight: 500; }
+.topnav__right a.nav-item:hover { color: #fff; }
+.topnav__user { white-space: nowrap; }
+
+.topnav__menu-btn { display: none; background: none; border: none; color: #b7bcb8; font-size: 20px; cursor: pointer; padding: 4px; margin-right: 4px; }
+
+/* 手機版收合面板：把桌機的水平選單改直排全列出，含分組標題 */
+.topnav__mobile-panel {
+  display: none; position: fixed; top: 60px; left: 0; right: 0; bottom: 0; z-index: 45;
+  background: var(--ink); overflow-y: auto; padding: 8px 14px 24px; flex-direction: column; gap: 2px;
+}
+.topnav__mobile-panel.is-open { display: flex; }
+.topnav__mobile-panel .nav-group-label {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px; color: #5c625e; padding: 14px 10px 5px;
+}
+.topnav__mobile-panel .nav-item { height: auto; padding: 10px 10px; }
+.topnav__mobile-panel .nav-item.is-active { background: var(--brand); color: #fff; box-shadow: none; }
+.topnav__mobile-spacer { height: 1px; background: #2a302c; margin: 10px 0; flex-shrink: 0; }
 
 .main-content {
   flex: 1;
-  margin-left: var(--sidebar-w);
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 32px 40px 80px;
-  max-width: calc(1200px + var(--sidebar-w));
 }
 
 /* ---------- 4. Page header ---------- */
@@ -446,30 +465,18 @@ tbody tr:hover { background: var(--surface-2); }
 .hidden { display: none !important; }
 
 /* ---------- 18. Mobile ---------- */
-.topbar { display: none; }
-.nav-backdrop { display: none; position: fixed; inset: 0; z-index: 39; background: rgba(23,27,25,.45); }
-.nav-backdrop.show { display: block; }
 @media (max-width: 900px) {
   .form-layout { grid-template-columns: 1fr; }
   .form-nav { position: static; flex-direction: row; overflow-x: auto; }
   .product-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); transition: transform .22s ease; }
-  .sidebar.is-open { transform: translateX(0); }
-  .main-content { margin-left: 0; padding: 16px 16px 64px; }
+  .topnav { padding: 0 14px; }
+  .topnav__links, .topnav__right { display: none; }
+  .topnav__menu-btn { display: inline-flex; }
+  .topnav__brand { margin-right: auto; }
+  .main-content { padding: 20px 16px 64px; }
   .form-row { grid-template-columns: 1fr; }
-
-  /* 頂部列：品牌 + 漢堡，固定顯示 */
-  .topbar {
-    display: flex; align-items: center; justify-content: space-between;
-    background: var(--ink); padding: 12px 16px;
-    position: sticky; top: 0; z-index: 30; margin: -16px -16px 16px;
-  }
-  .topbar__brand { display: flex; align-items: center; gap: 9px; }
-  .topbar__logo { width: 26px; height: 26px; border-radius: 7px; background: var(--brand); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; }
-  .topbar__title { color: #fff; font-weight: 700; font-size: 15px; }
-  .topbar__menu { background: none; border: none; color: #b7bcb8; font-size: 22px; cursor: pointer; padding: 4px; }
 
   /* 頁首：標題獨立一行、操作依優先序堆疊 */
   .page-header { flex-direction: column; align-items: stretch; gap: 14px; }
