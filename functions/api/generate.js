@@ -101,6 +101,7 @@ export async function onRequestPost({ request, env }) {
 
     if (!anthropicRes.ok) {
       const err = await anthropicRes.text();
+      console.error('[generate] Anthropic 呼叫失敗', anthropicRes.status, err);
       return Response.json({ error: friendlyAnthropicError(anthropicRes.status, err) }, { status: 502 });
     }
 
